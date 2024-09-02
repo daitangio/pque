@@ -541,13 +541,7 @@ BEGIN
     atable
   );
 
-  IF NOT pigi__belongs_to_pgmq(qtable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', qtable);
-  END IF;
-
-  IF NOT pigi__belongs_to_pgmq(atable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', atable);
-  END IF;
+  -- GG Removed ALTER EXTENSION pgmq ADD TABLE pgmq.%I
 
   EXECUTE FORMAT(
     $QUERY$

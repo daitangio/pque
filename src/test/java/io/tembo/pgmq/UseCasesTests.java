@@ -6,13 +6,9 @@ import io.tembo.pgmq.json.PGMQJsonProcessor;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -24,18 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(classes = PGMQApplicationTest.class)
-@Testcontainers
 @DisplayName("Use cases")
 class UseCasesTests {
 
-    @Container
-    @ServiceConnection
-    private static final PostgreSQLContainer<?> postgreSQLContainer =
-            new PostgreSQLContainer<>(
-                    DockerImageName.parse("quay.io/tembo/pgmq-pg:latest")
-                            .asCompatibleSubstituteFor(PostgreSQLContainer.IMAGE))
-                    .withUsername("postgres")
-                    .withPassword("password");
 
     @Autowired
     PGMQConfiguration configuration;
@@ -58,9 +45,7 @@ class UseCasesTests {
     @DisplayName("Read")
     class Read {
         @Test
-        @DisplayName("""
-                Read message again if not deleted
-                """)
+        @DisplayName("                Read message again if not deleted")
         void readMessageWithoutDelete() throws InterruptedException {
             PGMQueue queue = new PGMQueue("without_delete_queue");
             pgmqClient.createQueue(queue);
@@ -87,9 +72,7 @@ class UseCasesTests {
         @DisplayName("Batch")
         class Batch {
             @Test
-            @DisplayName("""
-                    Success
-                    """)
+            @DisplayName("Success")
             void deleteMessages() {
                 PGMQueue queue = new PGMQueue("delete_queue");
                 pgmqClient.createQueue(queue);
@@ -108,9 +91,7 @@ class UseCasesTests {
             }
 
             @Test
-            @DisplayName("""
-                    Incomplete
-                    """)
+            @DisplayName("Incomplete")
             void failedDeleteMessages() {
                 PGMQueue queue = new PGMQueue("delete_queue");
                 pgmqClient.createQueue(queue);
@@ -134,9 +115,7 @@ class UseCasesTests {
         @DisplayName("Single")
         class Single {
             @Test
-            @DisplayName("""
-                    Success
-                    """)
+            @DisplayName("Success")
             void successDeleteMessage() {
                 PGMQueue queue = new PGMQueue("delete_queue");
                 pgmqClient.createQueue(queue);
@@ -153,9 +132,7 @@ class UseCasesTests {
             }
 
             @Test
-            @DisplayName("""
-                    Wrong message
-                    """)
+            @DisplayName("Wrong message")
             void failureDeleteMessage() {
                 PGMQueue queue = new PGMQueue("delete_queue");
                 pgmqClient.createQueue(queue);
@@ -250,9 +227,7 @@ class UseCasesTests {
     @DisplayName("Send")
     class Send {
         @Test
-        @DisplayName("""
-                Failed to send message on an invalid queue
-                """)
+        @DisplayName("                Failed to send message on an invalid queue")
         void sendMessageFailedToInvalidQueue() {
             PGMQueue queue = new PGMQueue("wrong-queue");
 
@@ -260,9 +235,7 @@ class UseCasesTests {
         }
 
         @Test
-        @DisplayName("""
-                Failed to send empty message
-                """)
+        @DisplayName("                Failed to send empty message")
         void emptyMessage() {
             PGMQueue queue = new PGMQueue("empty_message");
             pgmqClient.createQueue(queue);
@@ -273,9 +246,7 @@ class UseCasesTests {
         }
 
         @Test
-        @DisplayName("""
-                Failed to send wrong JSON format message
-                """)
+        @DisplayName("                Failed to send wrong JSON format message")
         void wrongJsonFormat() {
             PGMQueue queue = new PGMQueue("wrong_json_message");
             pgmqClient.createQueue(queue);
@@ -286,9 +257,7 @@ class UseCasesTests {
         }
 
         @Test
-        @DisplayName("""
-                Sending multiple messages transactional
-                """)
+        @DisplayName("                Sending multiple messages transactional")
         void sendingTransactional() {
             PGMQueue queue = new PGMQueue("transactional_queue");
             pgmqClient.createQueue(queue);
@@ -312,9 +281,7 @@ class UseCasesTests {
         }
 
         @Test
-        @DisplayName("""
-                Sending batch of messages
-                """)
+        @DisplayName("                Sending batch of messages")
         void sendingBatchOfMessages() {
             PGMQueue queue = new PGMQueue("batch_queue");
             pgmqClient.createQueue(queue);
@@ -338,9 +305,7 @@ class UseCasesTests {
     class PopTests {
 
         @Test
-        @DisplayName("""
-                No message available
-                """)
+        @DisplayName("                No message available")
         void popEmptyQueue() {
             PGMQueue queue = new PGMQueue("batch_queue");
             pgmqClient.createQueue(queue);
@@ -351,9 +316,7 @@ class UseCasesTests {
         }
 
         @Test
-        @DisplayName("""
-                Success
-                """)
+        @DisplayName("                Success")
         void popFullQueue() {
             PGMQueue queue = new PGMQueue("batch_queue");
             pgmqClient.createQueue(queue);

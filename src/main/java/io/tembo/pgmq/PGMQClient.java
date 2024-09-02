@@ -196,4 +196,13 @@ public class PGMQClient {
     }
 
 
+
+
+    public List<String> listQueues() {
+        // select * from pigi_queue_list();
+        List<String> qList=operations.queryForList("select * from pigi_queue_list()",String.class);
+        return qList;
+    }
+
+
 }

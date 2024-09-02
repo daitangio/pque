@@ -18,7 +18,8 @@ public class InfoApi {
 
     @GetMapping("/v1/info")
     public ResponseEntity<String> info(){
-        return  ResponseEntity.ok("PIGI ok");
+        var list=pgmqClient.listQueues();
+        return  ResponseEntity.ok("PIGI ok. Queues:"+list);
     }
 
     @PostMapping("/v1/send")

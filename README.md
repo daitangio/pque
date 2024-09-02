@@ -1,13 +1,19 @@
 # pigi
-PostgreSQL super LiGht queue System, pigi for friends
+PostgreSQL Super LiGht queue System, pigi for friends
 
-Do you have a PostgresQL 13 with a Java 11 application, and do you need a quick and dirty queue implementation? This is the answer.
+Do you have a PostgresQL 13 with a Java 11 application, and do you need a quick and solid queue implementation? This is one possible answer.
 
-Pigi born because we need a very 'vanilla' implementation, based on PostgreSQL 13 or beyond. Also queue configuration is done via script, you cannot create queue programmatically via the Java interfaces
+Pigi born because we need a very 'vanilla' implementation, based on PostgreSQL 13 or beyond, integrated with liquibase and Spring Boot.
+
+Feature:
+- Queue configuration is done via script, you cannot create queue programmatically, which is a safer approach
+- Based on a fork of [tembo pgmq](https://github.com/tembo-io/pgmq) offers great flexibility
+- The Spring Boot Interface is backported and extended from https://github.com/adamalexandru4/pgmq-spring
+- Spring Boot library included
+- PostgreSQL docker compose included for testing
+- Demo REST application provided 
 
 
-Ported from pgmql, offer a lighter solution, and also include the Spring Boot Interface, backported and extended from
-https://github.com/adamalexandru4/pgmq-spring
 
 PostgreSQL Target: 13.15+
 

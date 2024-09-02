@@ -3,7 +3,8 @@ PostgreSQL super LiGht queue System, pigi for friends
 
 Do you have a PostgresQL 13 with a Java 11 application, and do you need a quick and dirty queue implementation? This is the answer.
 
-Pigi born
+Pigi born because we need a very 'vanilla' implementation, based on PostgreSQL 13 or beyond. Also queue configuration is done via script, you cannot create queue programmatically via the Java interfaces
+
 
 Ported from pgmql, offer a lighter solution, and also include the Spring Boot Interface, backported and extended from
 https://github.com/adamalexandru4/pgmq-spring

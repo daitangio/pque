@@ -423,19 +423,6 @@ DECLARE
     atable TEXT := pigi_format_table_name(queue_name, 'a');
     fq_atable TEXT := 'pigi_' || atable;
 BEGIN
-    EXECUTE FORMAT(
-        $QUERY$
-        DROP TABLE pigi_%I
-        $QUERY$,
-        qtable
-    );
-
-    EXECUTE FORMAT(
-        $QUERY$
-        DROP TABLE pigi_%I
-        $QUERY$,
-        atable
-    );
 
     EXECUTE FORMAT(
         $QUERY$
@@ -454,7 +441,7 @@ BEGIN
      IF EXISTS (
           SELECT 1
           FROM information_schema.tables
-          WHERE table_name = 'meta' and table_schema = 'pgmq'
+          WHERE table_name = 't_pigi_meta'
      ) THEN
         EXECUTE FORMAT(
             $QUERY$
@@ -551,6 +538,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- GG: Data written to unlogged tables is not written to the write-ahead log.
+-- They are faster but not replicated and not crash safe. see https://www.postgresql.org/docs/current/sql-createtable.html
 CREATE OR REPLACE FUNCTION pigi_create_unlogged(queue_name TEXT)
 RETURNS void AS $$
 DECLARE

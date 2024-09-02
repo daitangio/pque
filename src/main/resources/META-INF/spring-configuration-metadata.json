@@ -18,4 +18,5 @@
       "description": "Check if a message is valid JSON before sending it in PGMQ.",
       "defaultValue": true
     }
-  ] }
+  ] 
+}

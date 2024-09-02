@@ -36,25 +36,7 @@ public class PGMQClient {
     }
 
 
-    public void createQueue(PGMQueue queue) {
-        Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
-        try {
-            operations.execute("SELECT pigi_create('" + queue.getName() + "')");
-        } catch (DataAccessException exception) {
-            throw new PGMQException("Failed to create queue " + queue.getName(), exception);
-        }
-    }
-
-    public void dropQueue(PGMQueue queue) {
-        Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
-
-        try {
-            operations.execute("SELECT pigi_drop_queue('" + queue.getName() + "')");
-        } catch (DataAccessException exception) {
-            throw new PGMQException("Failed to drop queue " + queue.getName(), exception);
-        }
-    }
 
     public long sendWithDelay(PGMQueue queue, String jsonMessage, PGMQDelay delay) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
@@ -79,6 +61,21 @@ public class PGMQClient {
     public long send(PGMQueue queue, String jsonMessage) {
         return sendWithDelay(queue, jsonMessage, configuration.getDelay());
     }
+
+    /**
+     * Facilty method 
+     * @param queue
+     * @param jsonMessage
+     * @return
+     */
+    public long send(String queue, String jsonMessage) {
+        return this.send(PGMQueue.builder().name(queue).build(), jsonMessage);
+    }
+
+    public long send(String queue, Object msgObj) {
+        return this.send(PGMQueue.builder().name(queue).build(), jsonProcessor.toJson(msgObj));
+    }
+
 
     public List<Long> sendBatchWithDelay(PGMQueue queue, List<String> jsonMessages, PGMQDelay delay) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);

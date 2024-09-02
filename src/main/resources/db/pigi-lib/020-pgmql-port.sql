@@ -361,7 +361,7 @@ RETURNS VOID AS $$
 DECLARE
   atable TEXT := pigi_format_table_name(queue_name, 'a');
 BEGIN
-  EXECUTE format('ALTER EXTENSION pgmq DROP TABLE pigi_%I', atable);
+  EXECUTE format('DROP TABLE pigi_%I', atable);
 END
 $$ LANGUAGE plpgsql;
 
@@ -425,14 +425,14 @@ DECLARE
 BEGIN
     EXECUTE FORMAT(
         $QUERY$
-        ALTER EXTENSION pgmq DROP TABLE pigi_%I
+        DROP TABLE pigi_%I
         $QUERY$,
         qtable
     );
 
     EXECUTE FORMAT(
         $QUERY$
-        ALTER EXTENSION pgmq DROP TABLE pigi_%I
+        DROP TABLE pigi_%I
         $QUERY$,
         atable
     );
@@ -486,25 +486,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pigi__belongs_to_pgmq(table_name TEXT)
-RETURNS BOOLEAN AS $$
-DECLARE
-    sql TEXT;
-    result BOOLEAN;
-BEGIN
-  SELECT EXISTS (
-    SELECT 1
-    FROM pg_depend
-    WHERE refobjid = (SELECT oid FROM pg_extension WHERE extname = 'pgmq')
-    AND objid = (
-        SELECT oid
-        FROM pg_class
-        WHERE relname = table_name
-    )
-  ) INTO result;
-  RETURN result;
-END;
-$$ LANGUAGE plpgsql;
+-- FIXME: Useless, removed belongs_to_pgmq
 
 CREATE OR REPLACE FUNCTION pigi_create_non_partitioned(queue_name TEXT)
 RETURNS void AS $$
@@ -603,13 +585,8 @@ BEGIN
     atable
   );
 
-  IF NOT pigi__belongs_to_pgmq(qtable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', qtable);
-  END IF;
+  -- GG Removed ALTER EXTENSION pgmq ADD TABLE
 
-  IF NOT pigi__belongs_to_pgmq(atable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', atable);
-  END IF;
 
   EXECUTE FORMAT(
     $QUERY$
@@ -700,9 +677,7 @@ BEGIN
     qtable, partition_col
   );
 
-  IF NOT pigi__belongs_to_pgmq(qtable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', qtable);
-  END IF;
+-- GG Removed ALTER EXTENSION
 
   -- https://github.com/pgpartman/pg_partman/blob/master/doc/pg_partman.md
   -- p_parent_table - the existing parent table. MUST be schema qualified, even if in public schema.
@@ -761,9 +736,8 @@ BEGIN
     atable, a_partition_col
   );
 
-  IF NOT pigi__belongs_to_pgmq(atable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', atable);
-  END IF;
+  -- GG Removed ALTER EXTENSION
+
 
   -- https://github.com/pgpartman/pg_partman/blob/master/doc/pg_partman.md
   -- p_parent_table - the existing parent table. MUST be schema qualified, even if in public schema.

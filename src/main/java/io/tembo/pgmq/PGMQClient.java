@@ -35,20 +35,12 @@ public class PGMQClient {
         this.jsonProcessor = jsonProcessor;
     }
 
-    // Try not to use in your code, the extension should be installed by administrator
-    public void enableExtension() {
-        try {
-            operations.execute("CREATE EXTENSION IF NOT EXISTS pgmq CASCADE");
-        } catch (DataAccessException exception) {
-            throw new PGMQException("Failed to enable 'pgmq' extension", exception);
-        }
-    }
 
     public void createQueue(PGMQueue queue) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
         try {
-            operations.execute("SELECT pgmq.create('" + queue.getName() + "')");
+            operations.execute("SELECT pigi_create('" + queue.getName() + "')");
         } catch (DataAccessException exception) {
             throw new PGMQException("Failed to create queue " + queue.getName(), exception);
         }
@@ -58,7 +50,7 @@ public class PGMQClient {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
         try {
-            operations.execute("SELECT pgmq.drop_queue('" + queue.getName() + "')");
+            operations.execute("SELECT pigi_drop_queue('" + queue.getName() + "')");
         } catch (DataAccessException exception) {
             throw new PGMQException("Failed to drop queue " + queue.getName(), exception);
         }
@@ -74,7 +66,7 @@ public class PGMQClient {
 
         Long messageId;
         try {
-            messageId = operations.queryForObject("select * from pgmq.send(?, ?::JSONB, ?)", (rs, rn) -> rs.getLong(1), queue.getName(), jsonMessage, delay.getSeconds());
+            messageId = operations.queryForObject("select * from pigi_send(?, ?::JSONB, ?)", (rs, rn) -> rs.getLong(1), queue.getName(), jsonMessage, delay.getSeconds());
         } catch (DataAccessException exception) {
             throw new PGMQException("Failed to send message on queue " + queue.getName(), exception);
         }
@@ -96,7 +88,7 @@ public class PGMQClient {
             Assert.isTrue(jsonMessages.stream().allMatch(jsonProcessor::isJson), "Messages should be in JSON format!");
         }
 
-        return operations.query("select * from pgmq.send_batch(?, ?::JSONB[], ?)", (rs, rn) -> rs.getLong(1), queue.getName(), jsonMessages.toArray(String[]::new), delay.getSeconds());
+        return operations.query("select * from pigi_send_batch(?, ?::JSONB[], ?)", (rs, rn) -> rs.getLong(1), queue.getName(), jsonMessages.toArray(String[]::new), delay.getSeconds());
     }
 
     public List<Long> sendBatch(PGMQueue queue, List<String> jsonMessages) {
@@ -117,7 +109,7 @@ public class PGMQClient {
 
         try {
             return operations.query(
-                    "select * from pgmq.read(?, ?, ?)",
+                    "select * from pigi_read(?, ?, ?)",
                     (rs, rowNum) -> new PGMQMessage(
                             rs.getLong("msg_id"),
                             rs.getLong("read_ct"),
@@ -142,7 +134,7 @@ public class PGMQClient {
             return Optional.ofNullable(
                     DataAccessUtils.singleResult(
                             operations.query(
-                                    "select * from pgmq.pop(?)",
+                                    "select * from pigi_pop(?)",
                                     (rs, rowNum) -> new PGMQMessage(
                                             rs.getLong("msg_id"),
                                             rs.getLong("read_ct"),
@@ -161,7 +153,7 @@ public class PGMQClient {
     public boolean delete(PGMQueue queue, long messageId) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
-        Boolean b = operations.queryForObject("select * from pgmq.delete(?, ?)", Boolean.class, queue.getName(), messageId);
+        Boolean b = operations.queryForObject("select * from pigi_delete(?, ?)", Boolean.class, queue.getName(), messageId);
 
         if (b == null) {
             throw new PGMQException("Error during deletion of message from queue!");
@@ -173,7 +165,7 @@ public class PGMQClient {
     public List<Long> deleteBatch(PGMQueue queue, List<Long> messageIds) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
-        List<Long> messageIdsDeleted = operations.query("select * from pgmq.delete(?, ?)", (rs, rn) -> rs.getLong(1), queue.getName(), messageIds.toArray(Long[]::new));
+        List<Long> messageIdsDeleted = operations.query("select * from pigi_delete(?, ?)", (rs, rn) -> rs.getLong(1), queue.getName(), messageIds.toArray(Long[]::new));
 
         if (messageIdsDeleted.size() != messageIds.size()) {
             LOGGER.warn("Some messages were not deleted!");
@@ -185,7 +177,7 @@ public class PGMQClient {
     public boolean archive(PGMQueue queue, long messageId) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
-        Boolean b = operations.queryForObject("select * from pgmq.archive(?, ?)", Boolean.class, queue.getName(), messageId);
+        Boolean b = operations.queryForObject("select * from pigi_archive(?, ?)", Boolean.class, queue.getName(), messageId);
 
         if (b == null) {
             throw new PGMQException("Error during archiving message from queue!");
@@ -197,7 +189,7 @@ public class PGMQClient {
     public List<Long> archiveBatch(PGMQueue queue, List<Long> messageIds) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
-        List<Long> messageIdsDeleted = operations.query("select * from pgmq.archive(?, ?)", (rs, rn) -> rs.getLong(1), queue.getName(), messageIds.toArray(Long[]::new));
+        List<Long> messageIdsDeleted = operations.query("select * from pigi_archive(?, ?)", (rs, rn) -> rs.getLong(1), queue.getName(), messageIds.toArray(Long[]::new));
 
         if (messageIdsDeleted.size() != messageIds.size()) {
             LOGGER.warn("Some messages were not archived!");

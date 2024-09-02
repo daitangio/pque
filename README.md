@@ -23,6 +23,7 @@ PostgreSQL Target: 13.15+
     - [Archive a message](#archive-a-message)
     - [Delete a message](#delete-a-message)
     - [Drop a queue](#drop-a-queue)
+- [About the port](#about-the-port)
 
 
 # Simple checks
@@ -272,3 +273,8 @@ SELECT pigi_drop_queue('my_queue');
  t
 (1 row)
 ```
+
+# About the port
+
+The port was done removing the extension name space, and renaming ' pgmq. ' into ' pigi_ '
+The table was renamed t_pigi_*

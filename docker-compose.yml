@@ -2,14 +2,14 @@ services:
   db:
     image: postgres:13.15-bookworm
     restart: always
-    mem_limit: 1024m
+    mem_limit: 256m
     cpus: 0.25
     environment:
-      POSTGRES_USER: postgres
-      # export PGPASSWORD
-      POSTGRES_PASSWORD: pigidemo
+      POSTGRES_USER: postgres      
+      POSTGRES_PASSWORD: pigidemo      
     volumes:
       - /opt/postgresql-13/data:/var/lib/postgresql/data
+      - ./etc/init-user-db.sh:/docker-entrypoint-initdb.d/init-user-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
       interval: 5m

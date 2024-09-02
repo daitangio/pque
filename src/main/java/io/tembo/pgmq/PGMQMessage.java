@@ -4,8 +4,10 @@ import java.time.OffsetDateTime;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 
 @Data
+@Getter()
 @AllArgsConstructor
 public class PGMQMessage {
         Long id;
@@ -13,4 +15,6 @@ public class PGMQMessage {
         OffsetDateTime enqueuedAt;
         OffsetDateTime visibilityTime;
         String jsonMessage;
+
+        public Long id() { return this.id;}
 }

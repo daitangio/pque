@@ -7,5 +7,6 @@
 
     <!-- Pigi lib -->
     <includeAll path="pigi-lib"                         relativeToChangelogFile="true"/>
+    <includeAll path="demo-queues"                         relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

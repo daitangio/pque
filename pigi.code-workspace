@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../pgmq"
+		},
+		{
+			"path": "../pgmq-spring"
 		}
 	],
 	"settings": {

@@ -1,7 +1,29 @@
 # pigi
-PostgreSQL Super light Queue System
+PostgreSQL super LiGht queue System, pigi for friends
+
+Do you have a PostgresQL 13 with a Java 11 application, and do you need a quick and dirty queue implementation? This is the answer.
+
+Pigi born
+
+Ported from pgmql, offer a lighter solution, and also include the Spring Boot Interface, backported and extended from
+https://github.com/adamalexandru4/pgmq-spring
 
 PostgreSQL Target: 13.15+
+
+- [pigi](#pigi)
+- [Simple checks](#simple-checks)
+- [PSQL Interface](#psql-interface)
+  - [SQL Examples](#sql-examples)
+    - [Creating a queue and interacting with it](#creating-a-queue-and-interacting-with-it)
+  - [PGML Examples](#pgml-examples)
+    - [Creating a queue](#creating-a-queue)
+    - [Send two messages](#send-two-messages)
+    - [Read messages](#read-messages)
+    - [Pop a message](#pop-a-message)
+    - [Archive a message](#archive-a-message)
+    - [Delete a message](#delete-a-message)
+    - [Drop a queue](#drop-a-queue)
+
 
 # Simple checks
     ./mvnw spring-boot:run

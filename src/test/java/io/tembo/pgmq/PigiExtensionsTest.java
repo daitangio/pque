@@ -24,6 +24,21 @@ public class PigiExtensionsTest {
         log.info("{}", pgmqClient.listQueues());
         assertEquals(7+2 /* test+demo */,
             pgmqClient.listQueues().size());
+    }
 
+    @Test 
+    public void getOne_Metric(){
+        var metrics=pgmqClient.getMetrics("empty_queue");
+        log.info("{}",metrics);
+        assertEquals(0,metrics.getQueueLength());
+        
+    }
+
+
+    @Test 
+    public void getMetrics(){
+        for(var metric : pgmqClient.getMetrics()){
+            log.info("{}",metric);
+        }
     }
 }

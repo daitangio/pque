@@ -4,6 +4,10 @@ import io.tembo.pgmq.config.PGMQConfiguration;
 import io.tembo.pgmq.config.PGMQDelay;
 import io.tembo.pgmq.config.PGMQVisiblityTimeout;
 import io.tembo.pgmq.json.PGMQJsonProcessor;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.ToString;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -12,7 +16,9 @@ import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,9 +27,24 @@ public class PGMQClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(PGMQClient.class);
     public static final String QUEUE_MUST_BE_NOT_NULL = "Queue must be not null!";
 
+    @Getter
+    @ToString
+    @AllArgsConstructor
+    public static class PigiMetric {
+        String queueName;
+        Long queueLength ;
+        int newestMsgAgeSec;
+        int oldestMsgAgeSec;
+        long totalMessages;
+        LocalDateTime scrapeTime;
+    }
+
+
     private final JdbcOperations operations;
     private final PGMQConfiguration configuration;
     private final PGMQJsonProcessor jsonProcessor;
+
+
 
     public PGMQClient(JdbcOperations operations, PGMQConfiguration configuration, PGMQJsonProcessor jsonProcessor) {
         Assert.notNull(operations, "JdbcOperations must be not null!");
@@ -204,5 +225,33 @@ public class PGMQClient {
         return qList;
     }
 
+
+
+    public List<PigiMetric> getMetrics(){
+        var metrics=new ArrayList<PigiMetric>();
+        // pigi_metrics
+        for(var queue : this.listQueues()){
+            var m = getMetrics(queue);
+            metrics.add(m);
+        }
+        return metrics;
+    }
+
+
+
+
+    public PigiMetric getMetrics(String queue) {
+        PigiMetric m=operations.queryForObject("select * from pigi_metrics(?)",(rs,rn) -> {
+            return new PigiMetric(
+                rs.getString("queue_name"),
+                rs.getLong("queue_length"),
+                rs.getInt("newest_msg_age_sec"),
+                rs.getInt("oldest_msg_age_sec"),
+                rs.getLong("total_messages"),
+                rs.getTimestamp("scrape_time").toLocalDateTime()
+            );
+        }, queue);
+        return m;
+    }
 
 }

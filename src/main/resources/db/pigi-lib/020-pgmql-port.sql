@@ -1,47 +1,21 @@
+-- liquibase formatted sql
+-- changeset GG:1 runOnChange:true splitStatements:false
+-- comment: Pigi stored procedures
+
 ------------------------------------------------------------
 -- Schema, tables, records, privileges, indexes, etc
+-- Ported from https://github.com/tembo-io/pgmq version 1.4.2 August 2024
 ------------------------------------------------------------
 -- We don't need to create the `pgmq` schema because it is automatically
 -- created by postgres due to being declared in extension control file
 
--- Table where queues and metadata about them is stored
-CREATE TABLE pgmq.meta (
-    queue_name VARCHAR UNIQUE NOT NULL,
-    is_partitioned BOOLEAN NOT NULL,
-    is_unlogged BOOLEAN NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
-);
-
--- Grant permission to pg_monitor to all tables and sequences
-GRANT USAGE ON SCHEMA pgmq TO pg_monitor;
-GRANT SELECT ON ALL TABLES IN SCHEMA pgmq TO pg_monitor;
-GRANT SELECT ON ALL SEQUENCES IN SCHEMA pgmq TO pg_monitor;
-ALTER DEFAULT PRIVILEGES IN SCHEMA pgmq GRANT SELECT ON TABLES TO pg_monitor;
-ALTER DEFAULT PRIVILEGES IN SCHEMA pgmq GRANT SELECT ON SEQUENCES TO pg_monitor;
-
--- This type has the shape of a message in a queue, and is often returned by
--- pgmq functions that return messages
-CREATE TYPE pgmq.message_record AS (
-    msg_id BIGINT,
-    read_ct INTEGER,
-    enqueued_at TIMESTAMP WITH TIME ZONE,
-    vt TIMESTAMP WITH TIME ZONE,
-    message JSONB
-);
-
-CREATE TYPE pgmq.queue_record AS (
-    queue_name VARCHAR,
-    is_partitioned BOOLEAN,
-    is_unlogged BOOLEAN,
-    created_at TIMESTAMP WITH TIME ZONE
-);
 
 ------------------------------------------------------------
 -- Functions
 ------------------------------------------------------------
 
 -- a helper to format table names and check for invalid characters
-CREATE FUNCTION pgmq.format_table_name(queue_name text, prefix text)
+CREATE OR REPLACE FUNCTION pigi_format_table_name(queue_name text, prefix text)
 RETURNS TEXT AS $$
 BEGIN
     IF queue_name ~ '\$|;|--|'''
@@ -54,28 +28,28 @@ $$ LANGUAGE plpgsql;
 
 -- read
 -- reads a number of messages from a queue, setting a visibility timeout on them
-CREATE FUNCTION pgmq.read(
+CREATE OR REPLACE FUNCTION pigi_read(
     queue_name TEXT,
     vt INTEGER,
     qty INTEGER
 )
-RETURNS SETOF pgmq.message_record AS $$
+RETURNS SETOF pigi_message_record AS $$
 DECLARE
     sql TEXT;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
 BEGIN
     sql := FORMAT(
         $QUERY$
         WITH cte AS
         (
             SELECT msg_id
-            FROM pgmq.%I
+            FROM pigi_%I
             WHERE vt <= clock_timestamp()
             ORDER BY msg_id ASC
             LIMIT $1
             FOR UPDATE SKIP LOCKED
         )
-        UPDATE pgmq.%I m
+        UPDATE pigi_%I m
         SET
             vt = clock_timestamp() + %L,
             read_ct = read_ct + 1
@@ -91,19 +65,19 @@ $$ LANGUAGE plpgsql;
 
 ---- read_with_poll
 ---- reads a number of messages from a queue, setting a visibility timeout on them
-CREATE FUNCTION pgmq.read_with_poll(
+CREATE OR REPLACE FUNCTION pigi_read_with_poll(
     queue_name TEXT,
     vt INTEGER,
     qty INTEGER,
     max_poll_seconds INTEGER DEFAULT 5,
     poll_interval_ms INTEGER DEFAULT 100
 )
-RETURNS SETOF pgmq.message_record AS $$
+RETURNS SETOF pigi_message_record AS $$
 DECLARE
-    r pgmq.message_record;
+    r pigi_message_record;
     stop_at TIMESTAMP;
     sql TEXT;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
 BEGIN
     stop_at := clock_timestamp() + make_interval(secs => max_poll_seconds);
     LOOP
@@ -116,13 +90,13 @@ BEGIN
           WITH cte AS
           (
               SELECT msg_id
-              FROM pgmq.%I
+              FROM pigi_%I
               WHERE vt <= clock_timestamp()
               ORDER BY msg_id ASC
               LIMIT $1
               FOR UPDATE SKIP LOCKED
           )
-          UPDATE pgmq.%I m
+          UPDATE pigi_%I m
           SET
               vt = clock_timestamp() + %L,
               read_ct = read_ct + 1
@@ -150,7 +124,7 @@ $$ LANGUAGE plpgsql;
 ---- archive
 ---- removes a message from the queue, and sends it to the archive, where its
 ---- saved permanently.
-CREATE FUNCTION pgmq.archive(
+CREATE OR REPLACE FUNCTION pigi_archive(
     queue_name TEXT,
     msg_id BIGINT
 )
@@ -158,17 +132,17 @@ RETURNS BOOLEAN AS $$
 DECLARE
     sql TEXT;
     result BIGINT;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
-    atable TEXT := pgmq.format_table_name(queue_name, 'a');
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
+    atable TEXT := pigi_format_table_name(queue_name, 'a');
 BEGIN
     sql := FORMAT(
         $QUERY$
         WITH archived AS (
-            DELETE FROM pgmq.%I
+            DELETE FROM pigi_%I
             WHERE msg_id = $1
             RETURNING msg_id, vt, read_ct, enqueued_at, message
         )
-        INSERT INTO pgmq.%I (msg_id, vt, read_ct, enqueued_at, message)
+        INSERT INTO pigi_%I (msg_id, vt, read_ct, enqueued_at, message)
         SELECT msg_id, vt, read_ct, enqueued_at, message
         FROM archived
         RETURNING msg_id;
@@ -183,24 +157,24 @@ $$ LANGUAGE plpgsql;
 ---- archive
 ---- removes an array of message ids from the queue, and sends it to the archive,
 ---- where these messages will be saved permanently.
-CREATE FUNCTION pgmq.archive(
+CREATE OR REPLACE FUNCTION pigi_archive(
     queue_name TEXT,
     msg_ids BIGINT[]
 )
 RETURNS SETOF BIGINT AS $$
 DECLARE
     sql TEXT;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
-    atable TEXT := pgmq.format_table_name(queue_name, 'a');
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
+    atable TEXT := pigi_format_table_name(queue_name, 'a');
 BEGIN
     sql := FORMAT(
         $QUERY$
         WITH archived AS (
-            DELETE FROM pgmq.%I
+            DELETE FROM pigi_%I
             WHERE msg_id = ANY($1)
             RETURNING msg_id, vt, read_ct, enqueued_at, message
         )
-        INSERT INTO pgmq.%I (msg_id, vt, read_ct, enqueued_at, message)
+        INSERT INTO pigi_%I (msg_id, vt, read_ct, enqueued_at, message)
         SELECT msg_id, vt, read_ct, enqueued_at, message
         FROM archived
         RETURNING msg_id;
@@ -213,7 +187,7 @@ $$ LANGUAGE plpgsql;
 
 ---- delete
 ---- deletes a message id from the queue permanently
-CREATE FUNCTION pgmq.delete(
+CREATE OR REPLACE FUNCTION pigi_delete(
     queue_name TEXT,
     msg_id BIGINT
 )
@@ -221,11 +195,11 @@ RETURNS BOOLEAN AS $$
 DECLARE
     sql TEXT;
     result BIGINT;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
 BEGIN
     sql := FORMAT(
         $QUERY$
-        DELETE FROM pgmq.%I
+        DELETE FROM pigi_%I
         WHERE msg_id = $1
         RETURNING msg_id
         $QUERY$,
@@ -238,18 +212,18 @@ $$ LANGUAGE plpgsql;
 
 ---- delete
 ---- deletes an array of message ids from the queue permanently
-CREATE FUNCTION pgmq.delete(
+CREATE OR REPLACE FUNCTION pigi_delete(
     queue_name TEXT,
     msg_ids BIGINT[]
 )
 RETURNS SETOF BIGINT AS $$
 DECLARE
     sql TEXT;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
 BEGIN
     sql := FORMAT(
         $QUERY$
-        DELETE FROM pgmq.%I
+        DELETE FROM pigi_%I
         WHERE msg_id = ANY($1)
         RETURNING msg_id
         $QUERY$,
@@ -261,18 +235,18 @@ $$ LANGUAGE plpgsql;
 
 -- send
 -- sends a message to a queue, optionally with a delay
-CREATE FUNCTION pgmq.send(
+CREATE OR REPLACE FUNCTION pigi_send(
     queue_name TEXT,
     msg JSONB,
     delay INTEGER DEFAULT 0
 ) RETURNS SETOF BIGINT AS $$
 DECLARE
     sql TEXT;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
 BEGIN
     sql := FORMAT(
         $QUERY$
-        INSERT INTO pgmq.%I (vt, message)
+        INSERT INTO pigi_%I (vt, message)
         VALUES ((clock_timestamp() + %L), $1)
         RETURNING msg_id;
         $QUERY$,
@@ -284,18 +258,18 @@ $$ LANGUAGE plpgsql;
 
 -- send_batch
 -- sends an array of list of messages to a queue, optionally with a delay
-CREATE FUNCTION pgmq.send_batch(
+CREATE OR REPLACE FUNCTION pigi_send_batch(
     queue_name TEXT,
     msgs JSONB[],
     delay INTEGER DEFAULT 0
 ) RETURNS SETOF BIGINT AS $$
 DECLARE
     sql TEXT;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
 BEGIN
     sql := FORMAT(
         $QUERY$
-        INSERT INTO pgmq.%I (vt, message)
+        INSERT INTO pigi_%I (vt, message)
         SELECT clock_timestamp() + %L, unnest($1)
         RETURNING msg_id;
         $QUERY$,
@@ -305,23 +279,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- returned by pgmq.metrics() and pgmq.metrics_all
-CREATE TYPE pgmq.metrics_result AS (
-    queue_name text,
-    queue_length bigint,
-    newest_msg_age_sec int,
-    oldest_msg_age_sec int,
-    total_messages bigint,
-    scrape_time timestamp with time zone
-);
 
 -- get metrics for a single queue
-CREATE FUNCTION pgmq.metrics(queue_name TEXT)
-RETURNS pgmq.metrics_result AS $$
+CREATE OR REPLACE FUNCTION pigi_metrics(queue_name TEXT)
+RETURNS pigi_metrics_result AS $$
 DECLARE
-    result_row pgmq.metrics_result;
+    result_row pigi_metrics_result;
     query TEXT;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
 BEGIN
     query := FORMAT(
         $QUERY$
@@ -331,13 +296,13 @@ BEGIN
                 EXTRACT(epoch FROM (NOW() - max(enqueued_at)))::int as newest_msg_age_sec,
                 EXTRACT(epoch FROM (NOW() - min(enqueued_at)))::int as oldest_msg_age_sec,
                 NOW() as scrape_time
-            FROM pgmq.%I
+            FROM pigi_%I
         ),
         all_metrics AS (
             SELECT CASE
                 WHEN is_called THEN last_value ELSE 0
                 END as total_messages
-            FROM pgmq.%I
+            FROM pigi_%I
         )
         SELECT
             %L as queue_name,
@@ -356,70 +321,70 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- get metrics for all queues
-CREATE FUNCTION pgmq."metrics_all"()
-RETURNS SETOF pgmq.metrics_result AS $$
+CREATE OR REPLACE FUNCTION pigi_metrics_all()
+RETURNS SETOF pigi_metrics_result AS $$
 DECLARE
     row_name RECORD;
-    result_row pgmq.metrics_result;
+    result_row pigi_metrics_result;
 BEGIN
-    FOR row_name IN SELECT queue_name FROM pgmq.meta LOOP
-        result_row := pgmq.metrics(row_name.queue_name);
+    FOR row_name IN SELECT queue_name FROM t_pigi_meta LOOP
+        result_row := pigi_metrics(row_name.queue_name);
         RETURN NEXT result_row;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
 -- list queues
-CREATE FUNCTION pgmq."list_queues"()
-RETURNS SETOF pgmq.queue_record AS $$
+CREATE OR REPLACE FUNCTION pigi_list_queues()
+RETURNS SETOF pigi_queue_record AS $$
 BEGIN
-  RETURN QUERY SELECT * FROM pgmq.meta;
+  RETURN QUERY SELECT * FROM t_pigi_meta;
 END
 $$ LANGUAGE plpgsql;
 
 -- purge queue, deleting all entries in it.
-CREATE FUNCTION pgmq."purge_queue"(queue_name TEXT)
+CREATE OR REPLACE FUNCTION pigi_purge_queue(queue_name TEXT)
 RETURNS BIGINT AS $$
 DECLARE
   deleted_count INTEGER;
-  qtable TEXT := pgmq.format_table_name(queue_name, 'q');
+  qtable TEXT := pigi_format_table_name(queue_name, 'q');
 BEGIN
-  EXECUTE format('DELETE FROM pgmq.%I', qtable);
+  EXECUTE format('DELETE FROM pigi_%I', qtable);
   GET DIAGNOSTICS deleted_count = ROW_COUNT;
   RETURN deleted_count;
 END
 $$ LANGUAGE plpgsql;
 
 -- unassign archive, so it can be kept when a queue is deleted
-CREATE FUNCTION pgmq."detach_archive"(queue_name TEXT)
+CREATE OR REPLACE FUNCTION pigi_detach_archive(queue_name TEXT)
 RETURNS VOID AS $$
 DECLARE
-  atable TEXT := pgmq.format_table_name(queue_name, 'a');
+  atable TEXT := pigi_format_table_name(queue_name, 'a');
 BEGIN
-  EXECUTE format('ALTER EXTENSION pgmq DROP TABLE pgmq.%I', atable);
+  EXECUTE format('ALTER EXTENSION pgmq DROP TABLE pigi_%I', atable);
 END
 $$ LANGUAGE plpgsql;
 
 -- pop a single message
-CREATE FUNCTION pgmq.pop(queue_name TEXT)
-RETURNS SETOF pgmq.message_record AS $$
+CREATE OR REPLACE FUNCTION pigi_pop(queue_name TEXT)
+RETURNS SETOF pigi_message_record AS $$
 DECLARE
     sql TEXT;
-    result pgmq.message_record;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
+    result pigi_message_record;
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
 BEGIN
     sql := FORMAT(
         $QUERY$
         WITH cte AS
             (
                 SELECT msg_id
-                FROM pgmq.%I
+                FROM pigi_%I
                 WHERE vt <= now()
                 ORDER BY msg_id ASC
                 LIMIT 1
                 FOR UPDATE SKIP LOCKED
             )
-        DELETE from pgmq.%I
+        DELETE from pigi_%I
         WHERE msg_id = (select msg_id from cte)
         RETURNING *;
         $QUERY$,
@@ -430,16 +395,16 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Sets vt of a message, returns it
-CREATE FUNCTION pgmq.set_vt(queue_name TEXT, msg_id BIGINT, vt INTEGER)
-RETURNS SETOF pgmq.message_record AS $$
+CREATE OR REPLACE FUNCTION pigi_set_vt(queue_name TEXT, msg_id BIGINT, vt INTEGER)
+RETURNS SETOF pigi_message_record AS $$
 DECLARE
     sql TEXT;
-    result pgmq.message_record;
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
+    result pigi_message_record;
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
 BEGIN
     sql := FORMAT(
         $QUERY$
-        UPDATE pgmq.%I
+        UPDATE pigi_%I
         SET vt = (now() + %L)
         WHERE msg_id = %L
         RETURNING *;
@@ -450,38 +415,38 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION pgmq.drop_queue(queue_name TEXT, partitioned BOOLEAN DEFAULT FALSE)
+CREATE OR REPLACE FUNCTION pigi_drop_queue(queue_name TEXT, partitioned BOOLEAN DEFAULT FALSE)
 RETURNS BOOLEAN AS $$
 DECLARE
-    qtable TEXT := pgmq.format_table_name(queue_name, 'q');
-    fq_qtable TEXT := 'pgmq.' || qtable;
-    atable TEXT := pgmq.format_table_name(queue_name, 'a');
-    fq_atable TEXT := 'pgmq.' || atable;
+    qtable TEXT := pigi_format_table_name(queue_name, 'q');
+    fq_qtable TEXT := 'pigi_' || qtable;
+    atable TEXT := pigi_format_table_name(queue_name, 'a');
+    fq_atable TEXT := 'pigi_' || atable;
 BEGIN
     EXECUTE FORMAT(
         $QUERY$
-        ALTER EXTENSION pgmq DROP TABLE pgmq.%I
+        ALTER EXTENSION pgmq DROP TABLE pigi_%I
         $QUERY$,
         qtable
     );
 
     EXECUTE FORMAT(
         $QUERY$
-        ALTER EXTENSION pgmq DROP TABLE pgmq.%I
+        ALTER EXTENSION pgmq DROP TABLE pigi_%I
         $QUERY$,
         atable
     );
 
     EXECUTE FORMAT(
         $QUERY$
-        DROP TABLE IF EXISTS pgmq.%I
+        DROP TABLE IF EXISTS pigi_%I
         $QUERY$,
         qtable
     );
 
     EXECUTE FORMAT(
         $QUERY$
-        DROP TABLE IF EXISTS pgmq.%I
+        DROP TABLE IF EXISTS pigi_%I
         $QUERY$,
         atable
     );
@@ -493,7 +458,7 @@ BEGIN
      ) THEN
         EXECUTE FORMAT(
             $QUERY$
-            DELETE FROM pgmq.meta WHERE queue_name = %L
+            DELETE FROM t_pigi_meta WHERE queue_name = %L
             $QUERY$,
             queue_name
         );
@@ -512,7 +477,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION pgmq.validate_queue_name(queue_name TEXT)
+CREATE OR REPLACE FUNCTION pigi_validate_queue_name(queue_name TEXT)
 RETURNS void AS $$
 BEGIN
   IF length(queue_name) >= 48 THEN
@@ -521,7 +486,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION pgmq._belongs_to_pgmq(table_name TEXT)
+CREATE OR REPLACE FUNCTION pigi__belongs_to_pgmq(table_name TEXT)
 RETURNS BOOLEAN AS $$
 DECLARE
     sql TEXT;
@@ -541,17 +506,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION pgmq.create_non_partitioned(queue_name TEXT)
+CREATE OR REPLACE FUNCTION pigi_create_non_partitioned(queue_name TEXT)
 RETURNS void AS $$
 DECLARE
-  qtable TEXT := pgmq.format_table_name(queue_name, 'q');
-  atable TEXT := pgmq.format_table_name(queue_name, 'a');
+  qtable TEXT := pigi_format_table_name(queue_name, 'q');
+  atable TEXT := pigi_format_table_name(queue_name, 'a');
 BEGIN
-  PERFORM pgmq.validate_queue_name(queue_name);
+  PERFORM pigi_validate_queue_name(queue_name);
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE TABLE IF NOT EXISTS pgmq.%I (
+    CREATE TABLE IF NOT EXISTS pigi_%I (
         msg_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
         read_ct INT DEFAULT 0 NOT NULL,
         enqueued_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
@@ -564,7 +529,7 @@ BEGIN
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE TABLE IF NOT EXISTS pgmq.%I (
+    CREATE TABLE IF NOT EXISTS pigi_%I (
       msg_id BIGINT PRIMARY KEY,
       read_ct INT DEFAULT 0 NOT NULL,
       enqueued_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
@@ -576,31 +541,31 @@ BEGIN
     atable
   );
 
-  IF NOT pgmq._belongs_to_pgmq(qtable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pgmq.%I', qtable);
+  IF NOT pigi__belongs_to_pgmq(qtable) THEN
+      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', qtable);
   END IF;
 
-  IF NOT pgmq._belongs_to_pgmq(atable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pgmq.%I', atable);
+  IF NOT pigi__belongs_to_pgmq(atable) THEN
+      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', atable);
   END IF;
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE INDEX IF NOT EXISTS %I ON pgmq.%I (vt ASC);
+    CREATE INDEX IF NOT EXISTS %I ON pigi_%I (vt ASC);
     $QUERY$,
     qtable || '_vt_idx', qtable
   );
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE INDEX IF NOT EXISTS %I ON pgmq.%I (archived_at);
+    CREATE INDEX IF NOT EXISTS %I ON pigi_%I (archived_at);
     $QUERY$,
     'archived_at_idx_' || queue_name, atable
   );
 
   EXECUTE FORMAT(
     $QUERY$
-    INSERT INTO pgmq.meta (queue_name, is_partitioned, is_unlogged)
+    INSERT INTO t_pigi_meta (queue_name, is_partitioned, is_unlogged)
     VALUES (%L, false, false)
     ON CONFLICT
     DO NOTHING;
@@ -610,16 +575,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION pgmq.create_unlogged(queue_name TEXT)
+CREATE OR REPLACE FUNCTION pigi_create_unlogged(queue_name TEXT)
 RETURNS void AS $$
 DECLARE
-  qtable TEXT := pgmq.format_table_name(queue_name, 'q');
-  atable TEXT := pgmq.format_table_name(queue_name, 'a');
+  qtable TEXT := pigi_format_table_name(queue_name, 'q');
+  atable TEXT := pigi_format_table_name(queue_name, 'a');
 BEGIN
-  PERFORM pgmq.validate_queue_name(queue_name);
+  PERFORM pigi_validate_queue_name(queue_name);
   EXECUTE FORMAT(
     $QUERY$
-    CREATE UNLOGGED TABLE IF NOT EXISTS pgmq.%I (
+    CREATE UNLOGGED TABLE IF NOT EXISTS pigi_%I (
         msg_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
         read_ct INT DEFAULT 0 NOT NULL,
         enqueued_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
@@ -632,7 +597,7 @@ BEGIN
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE TABLE IF NOT EXISTS pgmq.%I (
+    CREATE TABLE IF NOT EXISTS pigi_%I (
       msg_id BIGINT PRIMARY KEY,
       read_ct INT DEFAULT 0 NOT NULL,
       enqueued_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
@@ -644,31 +609,31 @@ BEGIN
     atable
   );
 
-  IF NOT pgmq._belongs_to_pgmq(qtable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pgmq.%I', qtable);
+  IF NOT pigi__belongs_to_pgmq(qtable) THEN
+      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', qtable);
   END IF;
 
-  IF NOT pgmq._belongs_to_pgmq(atable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pgmq.%I', atable);
+  IF NOT pigi__belongs_to_pgmq(atable) THEN
+      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', atable);
   END IF;
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE INDEX IF NOT EXISTS %I ON pgmq.%I (vt ASC);
+    CREATE INDEX IF NOT EXISTS %I ON pigi_%I (vt ASC);
     $QUERY$,
     qtable || '_vt_idx', qtable
   );
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE INDEX IF NOT EXISTS %I ON pgmq.%I (archived_at);
+    CREATE INDEX IF NOT EXISTS %I ON pigi_%I (archived_at);
     $QUERY$,
     'archived_at_idx_' || queue_name, atable
   );
 
   EXECUTE FORMAT(
     $QUERY$
-    INSERT INTO pgmq.meta (queue_name, is_partitioned, is_unlogged)
+    INSERT INTO t_pigi_meta (queue_name, is_partitioned, is_unlogged)
     VALUES (%L, false, true)
     ON CONFLICT
     DO NOTHING;
@@ -678,7 +643,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION pgmq._get_partition_col(partition_interval TEXT)
+CREATE OR REPLACE FUNCTION pigi__get_partition_col(partition_interval TEXT)
 RETURNS TEXT AS $$
 DECLARE
   num INTEGER;
@@ -693,7 +658,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION pgmq._ensure_pg_partman_installed()
+CREATE OR REPLACE FUNCTION pigi__ensure_pg_partman_installed()
 RETURNS void AS $$
 DECLARE
   extension_exists BOOLEAN;
@@ -710,7 +675,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION pgmq.create_partitioned(
+CREATE OR REPLACE FUNCTION pigi_create_partitioned(
   queue_name TEXT,
   partition_interval TEXT DEFAULT '10000',
   retention_interval TEXT DEFAULT '100000'
@@ -719,18 +684,18 @@ RETURNS void AS $$
 DECLARE
   partition_col TEXT;
   a_partition_col TEXT;
-  qtable TEXT := pgmq.format_table_name(queue_name, 'q');
-  atable TEXT := pgmq.format_table_name(queue_name, 'a');
-  fq_qtable TEXT := 'pgmq.' || qtable;
-  fq_atable TEXT := 'pgmq.' || atable;
+  qtable TEXT := pigi_format_table_name(queue_name, 'q');
+  atable TEXT := pigi_format_table_name(queue_name, 'a');
+  fq_qtable TEXT := 'pigi_' || qtable;
+  fq_atable TEXT := 'pigi_' || atable;
 BEGIN
-  PERFORM pgmq.validate_queue_name(queue_name);
-  PERFORM pgmq._ensure_pg_partman_installed();
-  SELECT pgmq._get_partition_col(partition_interval) INTO partition_col;
+  PERFORM pigi_validate_queue_name(queue_name);
+  PERFORM pigi__ensure_pg_partman_installed();
+  SELECT pigi__get_partition_col(partition_interval) INTO partition_col;
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE TABLE IF NOT EXISTS pgmq.%I (
+    CREATE TABLE IF NOT EXISTS pigi_%I (
         msg_id BIGINT GENERATED ALWAYS AS IDENTITY,
         read_ct INT DEFAULT 0 NOT NULL,
         enqueued_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
@@ -741,8 +706,8 @@ BEGIN
     qtable, partition_col
   );
 
-  IF NOT pgmq._belongs_to_pgmq(qtable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pgmq.%I', qtable);
+  IF NOT pigi__belongs_to_pgmq(qtable) THEN
+      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', qtable);
   END IF;
 
   -- https://github.com/pgpartman/pg_partman/blob/master/doc/pg_partman.md
@@ -754,7 +719,7 @@ BEGIN
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE INDEX IF NOT EXISTS %I ON pgmq.%I (%I);
+    CREATE INDEX IF NOT EXISTS %I ON pigi_%I (%I);
     $QUERY$,
     qtable || '_part_idx', qtable, partition_col
   );
@@ -769,12 +734,12 @@ BEGIN
         automatic_maintenance = 'on'
     WHERE parent_table = %L;
     $QUERY$,
-    retention_interval, 'pgmq.' || qtable
+    retention_interval, 'pigi_' || qtable
   );
 
   EXECUTE FORMAT(
     $QUERY$
-    INSERT INTO pgmq.meta (queue_name, is_partitioned, is_unlogged)
+    INSERT INTO t_pigi_meta (queue_name, is_partitioned, is_unlogged)
     VALUES (%L, true, false)
     ON CONFLICT
     DO NOTHING;
@@ -790,7 +755,7 @@ BEGIN
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE TABLE IF NOT EXISTS pgmq.%I (
+    CREATE TABLE IF NOT EXISTS pigi_%I (
       msg_id BIGINT,
       read_ct INT DEFAULT 0 NOT NULL,
       enqueued_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
@@ -802,8 +767,8 @@ BEGIN
     atable, a_partition_col
   );
 
-  IF NOT pgmq._belongs_to_pgmq(atable) THEN
-      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pgmq.%I', atable);
+  IF NOT pigi__belongs_to_pgmq(atable) THEN
+      EXECUTE FORMAT('ALTER EXTENSION pgmq ADD TABLE pigi_%I', atable);
   END IF;
 
   -- https://github.com/pgpartman/pg_partman/blob/master/doc/pg_partman.md
@@ -823,12 +788,12 @@ BEGIN
         automatic_maintenance = 'on'
     WHERE parent_table = %L;
     $QUERY$,
-    retention_interval, 'pgmq.' || atable
+    retention_interval, 'pigi_' || atable
   );
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE INDEX IF NOT EXISTS %I ON pgmq.%I (archived_at);
+    CREATE INDEX IF NOT EXISTS %I ON pigi_%I (archived_at);
     $QUERY$,
     'archived_at_idx_' || queue_name, atable
   );
@@ -837,22 +802,22 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION pgmq.create(queue_name TEXT)
+CREATE OR REPLACE FUNCTION pigi_create(queue_name TEXT)
 RETURNS void AS $$
 BEGIN
-    PERFORM pgmq.create_non_partitioned(queue_name);
+    PERFORM pigi_create_non_partitioned(queue_name);
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION pgmq.convert_archive_partitioned(table_name TEXT,
+CREATE OR REPLACE FUNCTION pigi_convert_archive_partitioned(table_name TEXT,
                                                  partition_interval TEXT DEFAULT '10000',
                                                  retention_interval TEXT DEFAULT '100000',
                                                  leading_partition INT DEFAULT 10)
 RETURNS void AS $$
 DECLARE
-a_table_name TEXT := pgmq.format_table_name(table_name, 'a');
-a_table_name_old TEXT := pgmq.format_table_name(table_name, 'a') || '_old';
-qualified_a_table_name TEXT := format('pgmq.%I', a_table_name);
+a_table_name TEXT := pigi_format_table_name(table_name, 'a');
+a_table_name_old TEXT := pigi_format_table_name(table_name, 'a') || '_old';
+qualified_a_table_name TEXT := format('pigi_%I', a_table_name);
 BEGIN
 
   PERFORM c.relkind
@@ -879,9 +844,9 @@ BEGIN
 
   EXECUTE 'ALTER TABLE ' || qualified_a_table_name || ' RENAME TO ' || a_table_name_old;
 
-  EXECUTE format( 'CREATE TABLE pgmq.%I (LIKE pgmq.%I including all) PARTITION BY RANGE (msg_id)', a_table_name, a_table_name_old );
+  EXECUTE format( 'CREATE TABLE pigi_%I (LIKE pigi_%I including all) PARTITION BY RANGE (msg_id)', a_table_name, a_table_name_old );
 
-  EXECUTE 'ALTER INDEX pgmq.archived_at_idx_' || table_name || ' RENAME TO archived_at_idx_' || table_name || '_old';
+  EXECUTE 'ALTER INDEX pigi_archived_at_idx_' || table_name || ' RENAME TO archived_at_idx_' || table_name || '_old';
   EXECUTE 'CREATE INDEX archived_at_idx_'|| table_name || ' ON ' || qualified_a_table_name ||'(archived_at)';
 
   -- https://github.com/pgpartman/pg_partman/blob/master/doc/pg_partman.md

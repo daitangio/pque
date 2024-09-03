@@ -5,7 +5,7 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    <!-- Pigi lib -->
+    <!-- Pque lib -->
     <includeAll path="pque-lib"                         relativeToChangelogFile="true"/>
     <includeAll path="demo-queues"                      relativeToChangelogFile="true"/>
 

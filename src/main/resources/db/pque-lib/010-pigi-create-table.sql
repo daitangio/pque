@@ -1,6 +1,6 @@
 -- liquibase formatted sql
 -- changeset GG:1 runOnChange:false
--- comment: Pigi master meta table
+-- comment: Pque master meta table
 
 ------------------------------------------------------------
 -- Ported from https://github.com/tembo-io/pgmq version 1.4.2 August 2024

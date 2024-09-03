@@ -31,7 +31,7 @@ public class PGMQClient {
     @Getter
     @ToString
     @AllArgsConstructor
-    public static class PigiMetric {
+    public static class PqueMetric {
         String queueName;
         Long queueLength ;
         int newestMsgAgeSec;
@@ -228,8 +228,8 @@ public class PGMQClient {
 
 
 
-    public List<PigiMetric> getMetrics(){
-        var metrics=new ArrayList<PigiMetric>();
+    public List<PqueMetric> getMetrics(){
+        var metrics=new ArrayList<PqueMetric>();
         // pque_metrics
         for(var queue : this.listQueues()){
             var m = getMetrics(queue);
@@ -241,9 +241,9 @@ public class PGMQClient {
 
 
 
-    public PigiMetric getMetrics(String queue) {
-        PigiMetric m=operations.queryForObject("select * from pque_metrics(?)",(rs,rn) -> {
-            return new PigiMetric(
+    public PqueMetric getMetrics(String queue) {
+        PqueMetric m=operations.queryForObject("select * from pque_metrics(?)",(rs,rn) -> {
+            return new PqueMetric(
                 rs.getString("queue_name"),
                 rs.getLong("queue_length"),
                 rs.getInt("newest_msg_age_sec"),

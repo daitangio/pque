@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootTest(classes = PGMQApplicationTest.class)
 @Sql("classpath:test-queue.sql")
 @Slf4j
-public class PigiExtensionsTest {
+public class PqueExtensionsTest {
 
     @Autowired
     PGMQClient pgmqClient;

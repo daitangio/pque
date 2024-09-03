@@ -1,6 +1,6 @@
 -- liquibase formatted sql
 -- changeset GG:1 runOnChange:true splitStatements:false
--- comment: Pigi stored procedures
+-- comment: Pque stored procedures
 
 ------------------------------------------------------------
 -- Schema, tables, records, privileges, indexes, etc

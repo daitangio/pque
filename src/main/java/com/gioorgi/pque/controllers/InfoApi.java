@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.gioorgi.pque.FIXRequest;
 import com.gioorgi.pque.client.PGMQClient;
-import com.gioorgi.pque.client.PGMQClient.PigiMetric;
+import com.gioorgi.pque.client.PGMQClient.PqueMetric;
 import com.gioorgi.pque.client.config.PGMQConfiguration;
 
 import static com.gioorgi.pque.FIXRequest.FixMessageType.*;
@@ -31,7 +31,7 @@ public class InfoApi {
     @GetMapping("/v1/info")
     public ResponseEntity<String> info(){
         var list=pgmqClient.listQueues();
-        return  ResponseEntity.ok("PIGI ok. Queues:"+list);
+        return  ResponseEntity.ok("Pque ok. Queues:"+list);
     }
 
     @PostMapping("/v1/send")
@@ -42,11 +42,11 @@ public class InfoApi {
     }
 
     @GetMapping("/v1/status")
-    public ResponseEntity<List<PigiMetric>> status(){
+    public ResponseEntity<List<PqueMetric>> status(){
         return ResponseEntity.ok(pgmqClient.getMetrics());
     }
     @GetMapping("/v1/loadtest/{multiplexer}")
-    public ResponseEntity<PigiMetric> load(@PathVariable("multiplexer") Long multiplexer){    
+    public ResponseEntity<PqueMetric> load(@PathVariable("multiplexer") Long multiplexer){    
         // Make a load test 
         var request=
             FIXRequest

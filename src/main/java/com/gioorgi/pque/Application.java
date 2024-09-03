@@ -25,7 +25,7 @@ public class Application implements AsyncConfigurer {
 
     @PostConstruct
     public void weAreHere() {
-        log.info("$$$$$$$$$$$$$$$$ PIGI is here $$$$$$$$$$$$$$$$");
+        log.info("$$$$$$$$$$$$$$$$ Pque is here $$$$$$$$$$$$$$$$");
         log.info("$$$--- {}", marketConsumer);
     }
 

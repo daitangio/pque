@@ -1,7 +1,7 @@
 
 -- liquibase formatted sql
 -- changeset GG:1 runOnChange:false
--- comment: Pigi types
+-- comment: Pque types
 
 -- This type has the shape of a message in a queue, and is often returned by
 -- pgmq functions that return messages

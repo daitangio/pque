@@ -3,7 +3,7 @@ PostgreSQL super light QUeue system, *pque* for friends
 
 Do you have a PostgresQL 13 with a Java 11 application, and do you need a quick and solid queue implementation? This is a possible answer.
 
-Pigi born because we need a very 'vanilla' implementation, based on PostgreSQL 13 or beyond, integrated with liquibase and Spring Boot.
+Pque born because we need a very 'vanilla' implementation, based on PostgreSQL 13 or beyond, integrated with liquibase and Spring Boot.
 
 Feature:
 - Queue configuration is done via script, you cannot create queue programmatically, which is a safer approach

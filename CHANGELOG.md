@@ -1,3 +1,5 @@
+# Version 1.0.2
+- Renamed in pque
 # Version 1.0.1 
 - Removed unused feature
 - Added simple load test with two queues

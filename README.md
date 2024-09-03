@@ -1,5 +1,5 @@
-# pigi
-PostgreSQL Super LiGht queue System, pigi for friends
+# pque
+PostgreSQL super light QUeue system, *pque* for friends
 
 Do you have a PostgresQL 13 with a Java 11 application, and do you need a quick and solid queue implementation? This is a possible answer.
 
@@ -17,7 +17,7 @@ Feature:
 
 PostgreSQL Target: 13.15+
 
-- [pigi](#pigi)
+- [pque](#pque)
 - [Simple checks](#simple-checks)
 - [PSQL Interface](#psql-interface)
   - [SQL Examples](#sql-examples)
@@ -48,31 +48,31 @@ Connect to postgresql via psql.
 Then try:
 ```sql
 -- creates the queue
-SELECT pigi_create('mail_queue');
+SELECT pque_create('mail_queue');
 
 -- Send something everyone knows
-SELECT * from pigi_send(
+SELECT * from pque_send(
   queue_name  => 'mail_queue',
   msg         => '{"xml": "sucks"}'
 );
 
 -- Read it back
-SELECT * FROM pigi_pop('mail_queue');
+SELECT * FROM pque_pop('mail_queue');
 ```
 
 ## PGML Examples
 
-Below some examples taken from the original pgmql project, adapted to work with pigi
+Below some examples taken from the original pgmql project, adapted to work with pque
 
 
 ### Creating a queue
 
 Every queue is its own table in the `pgmq` schema. The table name is the queue name prefixed with `q_`.
-For example, `pigi_q_my_queue` is the table for the queue `my_queue`.
+For example, `pque_q_my_queue` is the table for the queue `my_queue`.
 
 ```sql
 -- creates the queue
-SELECT pigi_create('my_queue');
+SELECT pque_create('my_queue');
 ```
 
 ```text
@@ -86,7 +86,7 @@ SELECT pigi_create('my_queue');
 
 ```sql
 -- messages are sent as JSON
-SELECT * from pigi_send(
+SELECT * from pque_send(
   queue_name  => 'my_queue',
   msg         => '{"foo": "bar1"}'
 );
@@ -104,7 +104,7 @@ The message id is returned from the send function.
 ```sql
 -- Optionally provide a delay
 -- this message will be on the queue but unable to be consumed for 5 seconds
-SELECT * from pigi_send(
+SELECT * from pque_send(
   queue_name => 'my_queue',
   msg        => '{"foo": "bar2"}',
   delay      => 5
@@ -125,7 +125,7 @@ If the messages are not deleted or archived within 30 seconds, they will become 
 and can be read by another consumer.
 
 ```sql
-SELECT * FROM pigi_read(
+SELECT * FROM pque_read(
   queue_name => 'my_queue',
   vt         => 30,
   qty        => 2
@@ -142,7 +142,7 @@ SELECT * FROM pigi_read(
 If the queue is empty, or if all messages are currently invisible, no rows will be returned.
 
 ```sql
-SELECT * FROM pigi_read(
+SELECT * FROM pque_read(
   queue_name => 'my_queue',
   vt         => 30,
   qty        => 1
@@ -158,7 +158,7 @@ SELECT * FROM pigi_read(
 
 ```sql
 -- Read a message and immediately delete it from the queue. Returns an empty record if the queue is empty or all messages are invisible.
-SELECT * FROM pigi_pop('my_queue');
+SELECT * FROM pque_pop('my_queue');
 ```
 
 ```text
@@ -173,7 +173,7 @@ Archiving a message removes it from the queue and inserts it to the archive tabl
 
 ```sql
 -- Archive message with msg_id=2.
-SELECT pigi_archive(
+SELECT pque_archive(
   queue_name => 'my_queue',
   msg_id     => 2
 );
@@ -191,7 +191,7 @@ Or archive several messages in one operation using `msg_ids` (plural) parameter:
 First, send a batch of messages
 
 ```sql
-SELECT pigi_send_batch(
+SELECT pque_send_batch(
   queue_name => 'my_queue',
   msgs       => ARRAY['{"foo": "bar3"}','{"foo": "bar4"}','{"foo": "bar5"}']::jsonb[]
 );
@@ -209,7 +209,7 @@ SELECT pigi_send_batch(
 Then archive them by using the msg_ids (plural) parameter.
 
 ```sql
-SELECT pigi_archive(
+SELECT pque_archive(
   queue_name => 'my_queue',
   msg_ids    => ARRAY[3, 4, 5]
 );
@@ -228,7 +228,7 @@ Archive tables can be inspected directly with SQL.
  Archive tables have the prefix `a_` in the `pgmq` schema.
 
 ```sql
-SELECT * FROM pigi_a_my_queue;
+SELECT * FROM pque_a_my_queue;
 ```
 
 ```text
@@ -245,7 +245,7 @@ SELECT * FROM pigi_a_my_queue;
 Send another message, so that we can delete it.
 
 ```sql
-SELECT pigi_send('my_queue', '{"foo": "bar6"}');
+SELECT pque_send('my_queue', '{"foo": "bar6"}');
 ```
 
 ```text
@@ -258,7 +258,7 @@ SELECT pigi_send('my_queue', '{"foo": "bar6"}');
 Delete the message with id `6` from the queue named `my_queue`.
 
 ```sql
-SELECT pigi_delete('my_queue', 6);
+SELECT pque_delete('my_queue', 6);
 ```
 
 ```text
@@ -273,7 +273,7 @@ SELECT pigi_delete('my_queue', 6);
 Delete the queue `my_queue`.
 
 ```sql
-SELECT pigi_drop_queue('my_queue');
+SELECT pque_drop_queue('my_queue');
 ```
 
 ```text
@@ -285,8 +285,8 @@ SELECT pigi_drop_queue('my_queue');
 
 # About the port
 
-The port was done removing the extension name space, and renaming ' pgmq. ' into ' pigi_ '
-The table was renamed t_pigi_*
+The port was done removing the extension name space, and renaming ' pgmq. ' into ' pque_ '
+The table was renamed t_pque_*
 
 
 # About the DEMO

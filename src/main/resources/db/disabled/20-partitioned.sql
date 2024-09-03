@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION pigi__ensure_pg_partman_installed()
+CREATE OR REPLACE FUNCTION pque__ensure_pg_partman_installed()
 RETURNS void AS $$
 DECLARE
   extension_exists BOOLEAN;
@@ -16,7 +16,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION pigi_create_partitioned(
+CREATE OR REPLACE FUNCTION pque_create_partitioned(
   queue_name TEXT,
   partition_interval TEXT DEFAULT '10000',
   retention_interval TEXT DEFAULT '100000'
@@ -25,18 +25,18 @@ RETURNS void AS $$
 DECLARE
   partition_col TEXT;
   a_partition_col TEXT;
-  qtable TEXT := pigi_format_table_name(queue_name, 'q');
-  atable TEXT := pigi_format_table_name(queue_name, 'a');
-  fq_qtable TEXT := 'pigi_' || qtable;
-  fq_atable TEXT := 'pigi_' || atable;
+  qtable TEXT := pque_format_table_name(queue_name, 'q');
+  atable TEXT := pque_format_table_name(queue_name, 'a');
+  fq_qtable TEXT := 'pque_' || qtable;
+  fq_atable TEXT := 'pque_' || atable;
 BEGIN
-  PERFORM pigi_validate_queue_name(queue_name);
-  PERFORM pigi__ensure_pg_partman_installed();
-  SELECT pigi__get_partition_col(partition_interval) INTO partition_col;
+  PERFORM pque_validate_queue_name(queue_name);
+  PERFORM pque__ensure_pg_partman_installed();
+  SELECT pque__get_partition_col(partition_interval) INTO partition_col;
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE TABLE IF NOT EXISTS pigi_%I (
+    CREATE TABLE IF NOT EXISTS pque_%I (
         msg_id BIGINT GENERATED ALWAYS AS IDENTITY,
         read_ct INT DEFAULT 0 NOT NULL,
         enqueued_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
@@ -58,7 +58,7 @@ BEGIN
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE INDEX IF NOT EXISTS %I ON pigi_%I (%I);
+    CREATE INDEX IF NOT EXISTS %I ON pque_%I (%I);
     $QUERY$,
     qtable || '_part_idx', qtable, partition_col
   );
@@ -73,12 +73,12 @@ BEGIN
         automatic_maintenance = 'on'
     WHERE parent_table = %L;
     $QUERY$,
-    retention_interval, 'pigi_' || qtable
+    retention_interval, 'pque_' || qtable
   );
 
   EXECUTE FORMAT(
     $QUERY$
-    INSERT INTO t_pigi_meta (queue_name, is_partitioned, is_unlogged)
+    INSERT INTO t_pque_meta (queue_name, is_partitioned, is_unlogged)
     VALUES (%L, true, false)
     ON CONFLICT
     DO NOTHING;
@@ -94,7 +94,7 @@ BEGIN
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE TABLE IF NOT EXISTS pigi_%I (
+    CREATE TABLE IF NOT EXISTS pque_%I (
       msg_id BIGINT,
       read_ct INT DEFAULT 0 NOT NULL,
       enqueued_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
@@ -126,12 +126,12 @@ BEGIN
         automatic_maintenance = 'on'
     WHERE parent_table = %L;
     $QUERY$,
-    retention_interval, 'pigi_' || atable
+    retention_interval, 'pque_' || atable
   );
 
   EXECUTE FORMAT(
     $QUERY$
-    CREATE INDEX IF NOT EXISTS %I ON pigi_%I (archived_at);
+    CREATE INDEX IF NOT EXISTS %I ON pque_%I (archived_at);
     $QUERY$,
     'archived_at_idx_' || queue_name, atable
   );
@@ -139,15 +139,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pigi_convert_archive_partitioned(table_name TEXT,
+CREATE OR REPLACE FUNCTION pque_convert_archive_partitioned(table_name TEXT,
                                                  partition_interval TEXT DEFAULT '10000',
                                                  retention_interval TEXT DEFAULT '100000',
                                                  leading_partition INT DEFAULT 10)
 RETURNS void AS $$
 DECLARE
-a_table_name TEXT := pigi_format_table_name(table_name, 'a');
-a_table_name_old TEXT := pigi_format_table_name(table_name, 'a') || '_old';
-qualified_a_table_name TEXT := format('pigi_%I', a_table_name);
+a_table_name TEXT := pque_format_table_name(table_name, 'a');
+a_table_name_old TEXT := pque_format_table_name(table_name, 'a') || '_old';
+qualified_a_table_name TEXT := format('pque_%I', a_table_name);
 BEGIN
 
   PERFORM c.relkind
@@ -174,9 +174,9 @@ BEGIN
 
   EXECUTE 'ALTER TABLE ' || qualified_a_table_name || ' RENAME TO ' || a_table_name_old;
 
-  EXECUTE format( 'CREATE TABLE pigi_%I (LIKE pigi_%I including all) PARTITION BY RANGE (msg_id)', a_table_name, a_table_name_old );
+  EXECUTE format( 'CREATE TABLE pque_%I (LIKE pque_%I including all) PARTITION BY RANGE (msg_id)', a_table_name, a_table_name_old );
 
-  EXECUTE 'ALTER INDEX pigi_archived_at_idx_' || table_name || ' RENAME TO archived_at_idx_' || table_name || '_old';
+  EXECUTE 'ALTER INDEX pque_archived_at_idx_' || table_name || ' RENAME TO archived_at_idx_' || table_name || '_old';
   EXECUTE 'CREATE INDEX archived_at_idx_'|| table_name || ' ON ' || qualified_a_table_name ||'(archived_at)';
 
   -- https://github.com/pgpartman/pg_partman/blob/master/doc/pg_partman.md
@@ -194,7 +194,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION pigi__get_partition_col(partition_interval TEXT)
+CREATE OR REPLACE FUNCTION pque__get_partition_col(partition_interval TEXT)
 RETURNS TEXT AS $$
 DECLARE
   num INTEGER;

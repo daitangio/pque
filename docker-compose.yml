@@ -6,7 +6,7 @@ services:
     cpus: 0.25
     environment:
       POSTGRES_USER: postgres      
-      POSTGRES_PASSWORD: pigidemo      
+      POSTGRES_PASSWORD: pquedemo      
     volumes:
       - /opt/postgresql-13/data:/var/lib/postgresql/data
       - ./etc/init-user-db.sh:/docker-entrypoint-initdb.d/init-user-db.sh:ro

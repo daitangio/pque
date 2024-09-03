@@ -6,7 +6,7 @@
                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
     <!-- Pigi lib -->
-    <includeAll path="pigi-lib"                         relativeToChangelogFile="true"/>
-    <includeAll path="demo-queues"                         relativeToChangelogFile="true"/>
+    <includeAll path="pque-lib"                         relativeToChangelogFile="true"/>
+    <includeAll path="demo-queues"                      relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

@@ -8,10 +8,10 @@
 		<version>2.7.16</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.gioorgi.pigi</groupId>
-	<artifactId>pigi</artifactId>
+	<groupId>com.gioorgi.pque</groupId>
+	<artifactId>pque</artifactId>
 	<version>1.0.1</version>
-	<name>pigi</name>
+	<name>pque</name>
 	<description>PostgreSQL super light message queue</description>
 	<properties>
 		<java.version>11</java.version>

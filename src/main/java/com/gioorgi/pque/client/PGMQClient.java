@@ -98,6 +98,14 @@ public class PGMQClient {
         return this.send(PGMQueue.builder().name(queue).build(), jsonProcessor.toJson(msgObj));
     }
 
+    /** FIXME: Cover with test */
+    public List<Long> sendBatch(String queue, List<Object> objects) {
+        var jsonized=objects.stream().map(jsonProcessor::toJson).toList();
+        return sendBatch(PGMQueue.builder().name(queue).build(), jsonized);
+
+    }
+
+
 
     public List<Long> sendBatchWithDelay(PGMQueue queue, List<String> jsonMessages, PGMQDelay delay) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
@@ -109,6 +117,7 @@ public class PGMQClient {
 
         return operations.query("select * from pque_send_batch(?, ?::JSONB[], ?)", (rs, rn) -> rs.getLong(1), queue.getName(), jsonMessages.toArray(String[]::new), delay.getSeconds());
     }
+
 
     public List<Long> sendBatch(PGMQueue queue, List<String> jsonMessages) {
         return sendBatchWithDelay(queue, jsonMessages, configuration.getDelay());

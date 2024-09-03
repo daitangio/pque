@@ -33,7 +33,7 @@ public class MarketEmulator {
             Thread.sleep(sleepTime);
             String response = "Processed into " + sleepTime + " Req:" + request.getQuoteReqId() + "Qty:"
                     + request.getQuantity();
-            // Optionally, send it back
+            // Optionally, send it back, to minimally stress the database
             pgmqClient.send("market_response", response);
             long processedSoFar=processed.incrementAndGet();
             // Show just 5%

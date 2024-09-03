@@ -48,7 +48,7 @@ public class FIXRequest {
     
     public enum OrdType  {
 
-        LIMIT('2'), // GG USED?
+        LIMIT('2'),
     
         MARKET('1'),
     

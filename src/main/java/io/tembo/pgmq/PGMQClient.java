@@ -90,7 +90,7 @@ public class PGMQClient {
      * @return
      */
     public long send(String queue, String jsonMessage) {
-        return this.send(PGMQueue.builder().name(queue).build(), jsonMessage);
+        return this.send(PGMQueue.builder().name(queue).build(), jsonProcessor.toJson(jsonMessage));
     }
 
     public long send(String queue, Object msgObj) {

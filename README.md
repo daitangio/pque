@@ -8,10 +8,11 @@ Pigi born because we need a very 'vanilla' implementation, based on PostgreSQL 1
 Feature:
 - Queue configuration is done via script, you cannot create queue programmatically, which is a safer approach
 - Based on a fork of [tembo pgmq](https://github.com/tembo-io/pgmq) offers great flexibility
-- The Spring Boot Interface is backported and extended from https://github.com/adamalexandru4/pgmq-spring
+- The Spring Boot Interface was backported and extended from https://github.com/adamalexandru4/pgmq-spring
 - Spring Boot library included
 - PostgreSQL docker compose included for testing
-- Demo REST application provided 
+- Demo REST application provided
+- Removed partitioned implementation and simplified code
 
 
 
@@ -31,6 +32,7 @@ PostgreSQL Target: 13.15+
     - [Delete a message](#delete-a-message)
     - [Drop a queue](#drop-a-queue)
 - [About the port](#about-the-port)
+- [About the DEMO](#about-the-demo)
 
 
 # Simple checks
@@ -285,3 +287,21 @@ SELECT pigi_drop_queue('my_queue');
 
 The port was done removing the extension name space, and renaming ' pgmq. ' into ' pigi_ '
 The table was renamed t_pigi_*
+
+
+# About the DEMO
+
+The demo project show the dequeue speed. It emulate a realistic FIXRequest object (taken from FIX44) with just one thread (MarketConsumer)
+dequeing things and sending to a pool of async "Market Emulators".
+
+Run the database with docker the run the project with
+
+  docker compose up -d
+  ./mvnw spring-boot:run
+
+Open another shell, then fill some data with
+
+  ./loadTest.sh 200
+
+With the pom.xml+docker-compose.xml configuration, and automatic memory management 
+this version gets around 360-370 messages/second in the average scenario

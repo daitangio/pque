@@ -1,3 +1,7 @@
+-- liquibase formatted sql
+-- changeset GG:1 runOnChange:true splitStatements:false
+-- comment: Pigi unlogged queue API
+
 -- GG: Data written to unlogged tables is not written to the write-ahead log.
 -- They are faster but not replicated and not crash safe. see https://www.postgresql.org/docs/current/sql-createtable.html
 CREATE OR REPLACE FUNCTION pigi_create_unlogged(queue_name TEXT)

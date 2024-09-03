@@ -1,7 +1,7 @@
 # pigi
 PostgreSQL Super LiGht queue System, pigi for friends
 
-Do you have a PostgresQL 13 with a Java 11 application, and do you need a quick and solid queue implementation? This is one possible answer.
+Do you have a PostgresQL 13 with a Java 11 application, and do you need a quick and solid queue implementation? This is a possible answer.
 
 Pigi born because we need a very 'vanilla' implementation, based on PostgreSQL 13 or beyond, integrated with liquibase and Spring Boot.
 
@@ -13,7 +13,6 @@ Feature:
 - PostgreSQL docker compose included for testing
 - Demo REST application provided
 - Removed partitioned implementation and simplified code
-
 
 
 PostgreSQL Target: 13.15+
@@ -33,6 +32,7 @@ PostgreSQL Target: 13.15+
     - [Drop a queue](#drop-a-queue)
 - [About the port](#about-the-port)
 - [About the DEMO](#about-the-demo)
+- [Other implementations](#other-implementations)
 
 
 # Simple checks
@@ -291,7 +291,8 @@ The table was renamed t_pigi_*
 
 # About the DEMO
 
-The demo project show the dequeue speed. It emulate a realistic FIXRequest object (taken from FIX44) with just one thread (MarketConsumer)
+This demo project show the dequeue speed in a real-scenario.
+It emulate a realistic FIXRequest object (taken from FIX44) with just one thread (MarketConsumer)
 dequeing things and sending to a pool of async "Market Emulators".
 
 Run the database with docker the run the project with
@@ -304,4 +305,11 @@ Open another shell, then fill some data with
   ./loadTest.sh 200
 
 With the pom.xml+docker-compose.xml configuration, and automatic memory management 
-this version gets around 360-370 messages/second in the average scenario
+this version gets around 360-370 messages/second in the average scenario.
+
+
+With unlogged tables, we can easily reach 540 messages/second 
+
+# Other implementations
+
+- Python based: https://github.com/malthe/pq

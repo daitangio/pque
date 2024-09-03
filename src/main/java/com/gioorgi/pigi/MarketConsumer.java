@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import io.tembo.pgmq.PGMQClient;
 import io.tembo.pgmq.PGMQueue;
 import io.tembo.pgmq.json.PGMQJsonProcessor;
+import liquibase.pro.packaged.ms;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,7 @@ public class MarketConsumer {
     @Qualifier("applicationTaskExecutor")
     Executor consumerExcutor;
 
-    static float best_msg_sec=0;
+    static float best_msg_sec=0, worst_msg_sec=10000000000f;
 
     @Scheduled(fixedDelay = 2, timeUnit = TimeUnit.SECONDS)
     public void processMarketRequests() {
@@ -76,7 +77,10 @@ public class MarketConsumer {
         if(msg_sec > best_msg_sec){
             best_msg_sec=msg_sec;
         }
-        log.info("Dequeue BestMsg/sec so far:{} Msg/sec:{} Msg so far:{} ",best_msg_sec,msg_sec,processedMessages);
+        if(msg_sec < worst_msg_sec){
+            worst_msg_sec=msg_sec;
+        }
+        log.info("Dequeue Best Msg/sec:{} Worst:{} Current:{} Msg so far:{} ",best_msg_sec,worst_msg_sec,msg_sec,processedMessages);
     }
 
 }

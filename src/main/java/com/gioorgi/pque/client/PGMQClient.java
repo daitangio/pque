@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.jdbc.core.JdbcOperations;
@@ -22,16 +20,23 @@ import com.gioorgi.pque.client.json.PGMQJsonProcessor;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
-
+import lombok.extern.slf4j.Slf4j;
+/**
+ * Client heavly refactored from https://github.com/adamalexandru4/pgmq-spring
+ * It offers high and low level API to pop/push json-serialized messages.
+ * It also offer batch and delay functionalities.
+ * 
+ * @author GG
+ */
+@Slf4j
 public class PGMQClient {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PGMQClient.class);
-    public static final String QUEUE_MUST_BE_NOT_NULL = "Queue must be not null!";
+    public static final String QUEUE_MUST_BE_NOT_NULL = "Queue must not be null!";
 
     @Getter
     @ToString
     @AllArgsConstructor
-    public static class PqueMetric {
+    public static class PQUEMetric {
         String queueName;
         Long queueLength ;
         int newestMsgAgeSec;
@@ -42,7 +47,7 @@ public class PGMQClient {
 
     private void validateQueueName(String queueName){        
         if (!StringUtils.hasText(queueName)) {
-                throw new PGMQException("Name of the queue must be not null with non-empty characters!");
+                throw new PGMQException("Name of the queue must not be null with non-empty characters!");
         }
     }
 
@@ -51,9 +56,9 @@ public class PGMQClient {
     private final PGMQJsonProcessor jsonProcessor;
 
     public PGMQClient(JdbcOperations operations, PGMQConfiguration configuration, PGMQJsonProcessor jsonProcessor) {
-        Assert.notNull(operations, "JdbcOperations must be not null!");
-        Assert.notNull(configuration, "PGMQConfiguration must be not null!");
-        Assert.notNull(jsonProcessor, "PGMQJsonProcessor must be not null!");
+        Assert.notNull(operations, "JdbcOperations must not be null!");
+        Assert.notNull(configuration, "PGMQConfiguration must not be null!");
+        Assert.notNull(jsonProcessor, "PGMQJsonProcessor must not be null!");
 
         this.operations = operations;
         this.configuration = configuration;
@@ -63,17 +68,18 @@ public class PGMQClient {
 
 
 
-    public long sendWithDelay(String queue, String jsonMessage, PGMQDelay delay) {
+    private final long sendWithDelayLowLevel(String queue, String jsonMessage, PGMQDelay delay) {
         validateQueueName(queue);
 
         if (configuration.isCheckMessage()) {
-            Assert.isTrue(StringUtils.hasText(jsonMessage), "Message should be not empty!");
+            Assert.isTrue(StringUtils.hasText(jsonMessage), "Message should not be empty!");
             Assert.isTrue(jsonProcessor.isJson(jsonMessage), "Message should be in JSON format!");
         }
 
         Long messageId;
         try {
             messageId = operations.queryForObject("select * from pque_send(?, ?::JSONB, ?)", (rs, rn) -> rs.getLong(1), queue, jsonMessage, delay.getSeconds());
+            log.trace("Msgid {} Sent with delay {}seconds",messageId,delay.getSeconds());
         } catch (DataAccessException exception) {
             throw new PGMQException("Failed to send message on queue " + queue, exception);
         }
@@ -83,40 +89,47 @@ public class PGMQClient {
     }
 
 
-    public long send(String queue, String jsonMessage) {
-        return sendWithDelay(queue, jsonMessage, configuration.getDelay());
+    public <T extends Object> long sendWithDelay(String queue, T objectMessage, PGMQDelay delay) {
+        return sendWithDelayLowLevel(queue, jsonProcessor.toJson(objectMessage), delay);
+    }
+
+    /** Send one message with default delay
+     * 
+     */
+    public <T extends Object> long send(String queue, T objectMessage) {
+        if (configuration.isCheckMessage()) {
+            if (objectMessage instanceof String) {
+                Assert.isTrue(StringUtils.hasText((String)objectMessage), "Message should not be empty!");
+            }else{
+                Assert.notNull(objectMessage,"Message must not be null!");
+            }
+        }
+        return sendWithDelayLowLevel(queue, jsonProcessor.toJson(objectMessage), configuration.getDelay());
     }
 
 
-    public long sendObject(String queue, Object msgObj) {
-        return this.send(queue, jsonProcessor.toJson(msgObj));
+    public <T extends Object> List<Long> sendBatchWithDelay(String queue, List<T> objectMessageList, PGMQDelay delay) {
+        List<String> jsonMessages=objectMessageList.stream().map(jsonProcessor::toJson).toList();
+        return sendBatchWithDelayLowLevel(queue, jsonMessages, delay);
     }
 
+    /** Send with default configured delay, in batched
+     * 
+     */
+    public <T extends Object> List<Long> sendBatch(String queue, List<T> jsonMessages) {
+        return sendBatchWithDelay(queue, jsonMessages, configuration.getDelay());
+    }
 
-
-
-
-    public List<Long> sendBatchWithDelay(String queue, List<String> jsonMessages, PGMQDelay delay) {
+    private List<Long> sendBatchWithDelayLowLevel(String queue, List<String> jsonMessages, PGMQDelay delay) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
         if (configuration.isCheckMessage()) {
-            Assert.isTrue(jsonMessages.stream().allMatch(StringUtils::hasText), "Messages should be not empty!");
+            Assert.isTrue(jsonMessages.stream().allMatch(StringUtils::hasText), "Messages should not be empty!");
             Assert.isTrue(jsonMessages.stream().allMatch(jsonProcessor::isJson), "Messages should be in JSON format!");
         }
 
         return operations.query("select * from pque_send_batch(?, ?::JSONB[], ?)", (rs, rn) -> rs.getLong(1), queue, jsonMessages.toArray(String[]::new), delay.getSeconds());
     }
-
-
-    public List<Long> sendBatch(String queue, List<String> jsonMessages) {
-        return sendBatchWithDelay(queue, jsonMessages, configuration.getDelay());
-    }
-
-    // /** FIXME: Cover with test */
-    // public List<Long> sendBatch(String queue, List<Object> objects) {
-    //     var jsonized=objects.stream().map(jsonProcessor::toJson).toList();
-    //     return sendBatch(queue, jsonized);
-    // }
 
     public Optional<PGMQMessage> read(String queue) {
         return read(queue, configuration.getVisibilityTimeout());
@@ -150,7 +163,20 @@ public class PGMQClient {
         return readBatch(queue, configuration.getVisibilityTimeout(), quantity);
     }
 
-    public Optional<PGMQMessage> pop(String queue) {
+    /**
+     * Pop directly a typed object
+     */
+    public <T> Optional<T> pop(String queue, Class<T> requiredType){
+        Optional<PGMQMessage> msg=popMsg(queue);
+        if(msg.isEmpty()){
+            return Optional.ofNullable(null);
+        }else{
+            String json=msg.get().getJsonMessage();
+            return Optional.of(jsonProcessor.fromJson(json, requiredType));
+        }   
+    }
+    
+    public Optional<PGMQMessage> popMsg(String queue) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
         try {
@@ -191,7 +217,7 @@ public class PGMQClient {
         List<Long> messageIdsDeleted = operations.query("select * from pque_delete(?, ?)", (rs, rn) -> rs.getLong(1), queue, messageIds.toArray(Long[]::new));
 
         if (messageIdsDeleted.size() != messageIds.size()) {
-            LOGGER.warn("Some messages were not deleted!");
+            log.warn("Some messages were not deleted!");
         }
 
         return messageIdsDeleted;
@@ -215,12 +241,11 @@ public class PGMQClient {
         List<Long> messageIdsDeleted = operations.query("select * from pque_archive(?, ?)", (rs, rn) -> rs.getLong(1), queue, messageIds.toArray(Long[]::new));
 
         if (messageIdsDeleted.size() != messageIds.size()) {
-            LOGGER.warn("Some messages were not archived!");
+            log.warn("Some messages were not archived!");
         }
 
         return messageIdsDeleted;
     }
-
 
 
 
@@ -232,8 +257,8 @@ public class PGMQClient {
 
 
 
-    public List<PqueMetric> getMetrics(){
-        var metrics=new ArrayList<PqueMetric>();
+    public List<PQUEMetric> getMetrics(){
+        var metrics=new ArrayList<PQUEMetric>();
         // pque_metrics
         for(var queue : this.listQueues()){
             var m = getMetrics(queue);
@@ -245,9 +270,9 @@ public class PGMQClient {
 
 
 
-    public PqueMetric getMetrics(String queue) {
-        PqueMetric m=operations.queryForObject("select * from pque_metrics(?)",(rs,rn) -> {
-            return new PqueMetric(
+    public PQUEMetric getMetrics(String queue) {
+        PQUEMetric m=operations.queryForObject("select * from pque_metrics(?)",(rs,rn) -> {
+            return new PQUEMetric(
                 rs.getString("queue_name"),
                 rs.getLong("queue_length"),
                 rs.getInt("newest_msg_age_sec"),

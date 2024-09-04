@@ -1,11 +1,10 @@
 package com.gioorgi.pque.client.json;
 
+import org.springframework.util.Assert;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gioorgi.pque.client.PGMQException;
-
-import org.springframework.util.Assert;
 
 public class PGMQJsonProcessorJackson implements PGMQJsonProcessor {
 

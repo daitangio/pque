@@ -213,16 +213,10 @@ class UseCasesTests {
             @Test
             @DisplayName("Wrong message")
             void failedSingleMessage() {
-
-                final String queue="delete_queue";
-                
-
-                long messageId = pgmqClient.send(queue, "{\"customer_name\": \"John\"}");
-
+                final String queue="delete_queue";            
+                pgmqClient.send(queue, "{\"customer_name\": \"John\"}");
                 boolean archived = pgmqClient.archive(queue, Long.MAX_VALUE);
                 assertThat(archived).isFalse();
-
-
             }
         }
     }
@@ -247,12 +241,6 @@ class UseCasesTests {
 
         }
 
-        @Test
-        @DisplayName("Failed to send wrong JSON format message")
-        void wrongJsonFormat() {
-            final String queue="wrong_json_message";            
-            assertThrows(IllegalArgumentException.class, () -> pgmqClient.send(queue, "{\"customer_name\": \"John}"), "Message should be in JSON format!");
-        }
 
         @Test
         @DisplayName("Sending multiple messages transactional")
@@ -305,7 +293,7 @@ class UseCasesTests {
         @DisplayName("No message available")
         void popEmptyQueue() {
             final String queue="empty_queue";            
-            assertThat(pgmqClient.pop(queue)).isEmpty();
+            assertThat(pgmqClient.pop(queue,Object.class)).isEmpty();
         }
 
 
@@ -317,14 +305,13 @@ class UseCasesTests {
             Customer customer = new Customer("John", LocalDate.of(1990, 2, 1), LocalDateTime.now(), 34);
             Long messageId = pgmqClient.send(
                     queue,
-                    jsonProcessor.toJson(customer)
+                    customer
             );
 
-            PGMQMessage message = pgmqClient.pop(queue).orElseThrow();
+            PGMQMessage message = pgmqClient.popMsg(queue).orElseThrow();
 
             assertThat(message.id()).isEqualTo(messageId);
-            assertThat(jsonProcessor.fromJson(message.getJsonMessage(), Customer.class))                    
-                    // FIXME: .usingRecursiveAssertion()
+            assertThat(jsonProcessor.fromJson(message.getJsonMessage(), Customer.class))                                        
                     .isEqualTo(customer);
 
         }

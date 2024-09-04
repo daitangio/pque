@@ -1,5 +1,6 @@
 package com.gioorgi.pque;
 
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -42,12 +43,9 @@ public class MarketConsumer {
         long processedMessages=0;
         long startTime = System.currentTimeMillis();
         while (true) {
-            var m = pgmqClient.pop("market_request");
-            if(m.isPresent()){
-                var msg=m.get();
-                // log.info("{}\t{}", msg.getId(), msg.getJsonMessage());
-                var request2Process=jsonProcessor.fromJson(msg.getJsonMessage(), FIXRequest.class);
-                marketEmulator.send2Market(request2Process);
+            Optional<FIXRequest> request2Process = pgmqClient.pop("market_request",FIXRequest.class);
+            if(request2Process.isPresent()){                
+                marketEmulator.send2Market(request2Process.get());
                 processedMessages++;
                 if(processedMessages % 1000 ==0){
                     printStats(processedMessages, startTime);

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.gioorgi.pque.FIXRequest;
 import com.gioorgi.pque.client.PGMQClient;
-import com.gioorgi.pque.client.PGMQClient.PqueMetric;
+import com.gioorgi.pque.client.PGMQClient.PQUEMetric;
 import com.gioorgi.pque.client.config.PGMQConfiguration;
 
 import lombok.extern.slf4j.Slf4j;
@@ -38,16 +38,22 @@ public class LoadTestApi{
 
     @PostMapping("/v1/send")
     public ResponseEntity<String> send(Object jsonObject){
-        pgmqClient.sendObject("market_request", jsonObject);        
+        pgmqClient.send("market_request", jsonObject);        
         return ResponseEntity.ok("SENT Delay:"+pgmqConfiguration.getDelay());
     }
 
     @GetMapping("/v1/status")
-    public ResponseEntity<List<PqueMetric>> status(){
+    public ResponseEntity<List<PQUEMetric>> status(){
         return ResponseEntity.ok(pgmqClient.getMetrics());
     }
+    /**
+     * To be truly correct, we should avoid loading messages with the same system we are examining.
+     * TODO: Replace this method with a PLSQL procedure
+     * @param multiplexer
+     * @return
+     */
     @GetMapping("/v1/loadtest/{multiplexer}")
-    public ResponseEntity<PqueMetric> load(@PathVariable("multiplexer") Long multiplexer){    
+    public ResponseEntity<PQUEMetric> load(@PathVariable("multiplexer") Long multiplexer){    
         // Make a load test 
         var request=
             FIXRequest
@@ -64,15 +70,14 @@ public class LoadTestApi{
             .exoticFlag("N")
             .build();
         var now=LocalDateTime.now();
-
+        
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMddHHSS");
         String formattedDate = now.format(formatter);    
-
+        request.setQuantity(new BigDecimal(multiplexer));
         for(int i=0; i<=100*multiplexer; i++){
             String finalId=formattedDate+"_"+i;
-            request.setQuoteReqId(finalId);
-            request.setQuantity(new BigDecimal(i));
-            pgmqClient.sendObject("market_request", request);
+            request.setQuoteReqId(finalId);           
+            pgmqClient.send("market_request", request);
             if(i%950 == 0){
                 log.info("** Loaded {} msg so far",i);
             }

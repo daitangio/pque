@@ -286,7 +286,7 @@ SELECT pque_drop_queue('my_queue');
 # About the port
 
 The port was done removing the extension name space, and renaming ' pgmq. ' into ' pque_ '
-The table was renamed t_pque_*
+The tables was renamed t_pque_* including the 'meta' table, which is used for interal housekeeping.
 
 
 # About the DEMO
@@ -305,8 +305,7 @@ Open another shell, then fill some data with
   ./loadTest.sh 200
 
 With the pom.xml+docker-compose.xml configuration, and automatic memory management 
-this version gets around 360-370 messages/second in the average scenario.
-
+this version gets around 400 messages/second in the average scenario.
 
 With unlogged tables, we can easily reach 540 messages/second 
 

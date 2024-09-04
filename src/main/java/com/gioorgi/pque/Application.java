@@ -33,7 +33,8 @@ public class Application implements AsyncConfigurer {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);
         executor.setMaxPoolSize(10);
-        //executor.setQueueCapacity(10000);
+        // Queue capacity is infinte by default: set it to show what happens when we start to refuse requests
+        //executor.setQueueCapacity(10);
         executor.setThreadNamePrefix("AsycExecutor-");
         executor.initialize();
         return executor;

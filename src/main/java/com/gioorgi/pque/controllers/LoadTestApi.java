@@ -74,7 +74,7 @@ public class LoadTestApi{
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMddHHSS");
         String formattedDate = now.format(formatter);    
         request.setQuantity(new BigDecimal(multiplexer));
-        for(int i=0; i<=100*multiplexer; i++){
+        for(int i=0; i<=10*multiplexer; i++){
             String finalId=formattedDate+"_"+i;
             request.setQuoteReqId(finalId);           
             pgmqClient.send("market_request", request);

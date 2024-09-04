@@ -17,7 +17,6 @@ public class PqueExtensionsTest {
     @Autowired
     PGMQClient pgmqClient;
 
-    // var list=pgmqClient.listQueues();
     @Test
     public void listQueueWorks(){
 

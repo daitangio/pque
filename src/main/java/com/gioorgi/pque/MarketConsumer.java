@@ -1,5 +1,6 @@
 package com.gioorgi.pque;
 
+import java.beans.Transient;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.gioorgi.pque.client.PGMQClient;
 import com.gioorgi.pque.client.json.PGMQJsonProcessor;
@@ -37,7 +39,8 @@ public class MarketConsumer {
 
     static float best_msg_sec=0, worst_msg_sec=10000000000f;
 
-    @Scheduled(fixedDelay = 2, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.SECONDS)
+    @Transactional
     public void processMarketRequests() {
         log.trace("Checking for message...");
         long processedMessages=0;

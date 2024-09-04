@@ -241,7 +241,7 @@ class UseCasesTests {
 
         }
 
-
+        /** Test transactional protection */
         @Test
         @DisplayName("Sending multiple messages transactional")
         void sendingTransactional() {

@@ -1,8 +1,5 @@
 package com.gioorgi.pque.client.config;
 
-import org.springframework.util.Assert;
-
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data

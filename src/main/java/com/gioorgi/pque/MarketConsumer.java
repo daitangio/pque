@@ -9,7 +9,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.gioorgi.pque.client.PGMQClient;
-import com.gioorgi.pque.client.PGMQueue;
 import com.gioorgi.pque.client.json.PGMQJsonProcessor;
 
 import lombok.Setter;
@@ -43,7 +42,7 @@ public class MarketConsumer {
         long processedMessages=0;
         long startTime = System.currentTimeMillis();
         while (true) {
-            var m = pgmqClient.pop(PGMQueue.builder().name("market_request").build());
+            var m = pgmqClient.pop("market_request");
             if(m.isPresent()){
                 var msg=m.get();
                 // log.info("{}\t{}", msg.getId(), msg.getJsonMessage());

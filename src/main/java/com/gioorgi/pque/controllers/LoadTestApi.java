@@ -38,8 +38,7 @@ public class LoadTestApi{
 
     @PostMapping("/v1/send")
     public ResponseEntity<String> send(Object jsonObject){
-        pgmqClient.send("market_request", jsonObject);
-        
+        pgmqClient.sendObject("market_request", jsonObject);        
         return ResponseEntity.ok("SENT Delay:"+pgmqConfiguration.getDelay());
     }
 
@@ -73,7 +72,7 @@ public class LoadTestApi{
             String finalId=formattedDate+"_"+i;
             request.setQuoteReqId(finalId);
             request.setQuantity(new BigDecimal(i));
-            pgmqClient.send("market_request", request);
+            pgmqClient.sendObject("market_request", request);
             if(i%950 == 0){
                 log.info("** Loaded {} msg so far",i);
             }

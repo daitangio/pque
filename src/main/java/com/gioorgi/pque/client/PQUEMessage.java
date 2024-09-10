@@ -9,7 +9,7 @@ import lombok.Getter;
 @Data
 @Getter()
 @AllArgsConstructor
-public class PGMQMessage {
+public class PQUEMessage {
         Long id;
         Long readCounter;
         OffsetDateTime enqueuedAt;

@@ -11,8 +11,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.gioorgi.pque.client.PGMQClient;
-import com.gioorgi.pque.client.json.PGMQJsonProcessor;
+import com.gioorgi.pque.client.PQUEClient;
+import com.gioorgi.pque.client.json.PQUEJsonProcessor;
 
 import lombok.Setter;
 import lombok.ToString;
@@ -25,10 +25,10 @@ import lombok.extern.slf4j.Slf4j;
 public class MarketConsumer {
 
     @Autowired
-    PGMQClient pgmqClient;
+    PQUEClient pqueClient;
 
     @Autowired
-    PGMQJsonProcessor jsonProcessor;
+    PQUEJsonProcessor jsonProcessor;
 
     @Autowired
     MarketEmulator marketEmulator;
@@ -46,7 +46,7 @@ public class MarketConsumer {
         long processedMessages=0;
         long startTime = System.currentTimeMillis();
         while (true) {
-            Optional<FIXRequest> request2Process = pgmqClient.pop("market_request",FIXRequest.class);
+            Optional<FIXRequest> request2Process = pqueClient.pop("market_request",FIXRequest.class);
             if(request2Process.isPresent()){                
                 marketEmulator.send2Market(request2Process.get());
                 processedMessages++;

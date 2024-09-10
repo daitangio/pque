@@ -2,29 +2,29 @@ package com.gioorgi.pque.client.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "pgmq")
-public class PGMQConfiguration {
+@ConfigurationProperties(prefix = "pque")
+public class PQUEConfiguration {
 
-    private PGMQDelay delay = new PGMQDelay(0);
+    private PQUEDelay delay = new PQUEDelay(0);
 
-    private PGMQVisiblityTimeout visibilityTimeout = new PGMQVisiblityTimeout(30);
+    private PQUEVisiblityTimeout visibilityTimeout = new PQUEVisiblityTimeout(30);
 
     private boolean checkMessage = true;
 
-    public PGMQDelay getDelay() {
+    public PQUEDelay getDelay() {
         return delay;
     }
 
     public void setDelay(int delay) {
-        this.delay = new PGMQDelay(delay);
+        this.delay = new PQUEDelay(delay);
     }
 
-    public PGMQVisiblityTimeout getVisibilityTimeout() {
+    public PQUEVisiblityTimeout getVisibilityTimeout() {
         return visibilityTimeout;
     }
 
     public void setVisibilityTimeout(int visibilityTimeout) {
-        this.visibilityTimeout = new PGMQVisiblityTimeout(visibilityTimeout);
+        this.visibilityTimeout = new PQUEVisiblityTimeout(visibilityTimeout);
     }
 
     public boolean isCheckMessage() {

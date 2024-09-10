@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import com.gioorgi.pque.client.PGMQClient;
+import com.gioorgi.pque.client.PQUEClient;
 
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 public class MarketEmulator {
 
     @Autowired
-    PGMQClient pgmqClient;
+    PQUEClient pqueClient;
 
     public static AtomicLong processed= new AtomicLong();
 
@@ -33,7 +33,7 @@ public class MarketEmulator {
             String response = "Processed into " + sleepTime + " Req:" + request.getQuoteReqId() + "Qty:"
                     + request.getQuantity();
             // Optionally, send it back, to minimally stress the database
-            pgmqClient.send("market_response", response);
+            pqueClient.send("market_response", response);
             long processedSoFar=processed.incrementAndGet();
             // Show just 5%
             if (randomGenerator.get().nextInt(100) <=5) {

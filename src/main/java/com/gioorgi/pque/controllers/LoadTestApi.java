@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.gioorgi.pque.FIXRequest;
-import com.gioorgi.pque.client.PGMQClient;
-import com.gioorgi.pque.client.PGMQClient.PQUEMetric;
-import com.gioorgi.pque.client.config.PGMQConfiguration;
+import com.gioorgi.pque.client.PQUEClient;
+import com.gioorgi.pque.client.PQUEClient.PQUEMetric;
+import com.gioorgi.pque.client.config.PQUEConfiguration;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,26 +25,26 @@ import lombok.extern.slf4j.Slf4j;
 public class LoadTestApi{
     
     @Autowired
-    PGMQClient pgmqClient;
+    PQUEClient pqueClient;
 
     @Autowired
-    PGMQConfiguration pgmqConfiguration;
+    PQUEConfiguration pqueConfiguration;
 
     @GetMapping("/v1/info")
     public ResponseEntity<String> info(){
-        var list=pgmqClient.listQueues();
+        var list=pqueClient.listQueues();
         return  ResponseEntity.ok("Pque ok. Queues:"+list);
     }
 
     @PostMapping("/v1/send")
     public ResponseEntity<String> send(Object jsonObject){
-        pgmqClient.send("market_request", jsonObject);        
-        return ResponseEntity.ok("SENT Delay:"+pgmqConfiguration.getDelay());
+        pqueClient.send("market_request", jsonObject);        
+        return ResponseEntity.ok("SENT Delay:"+pqueConfiguration.getDelay());
     }
 
     @GetMapping("/v1/status")
     public ResponseEntity<List<PQUEMetric>> status(){
-        return ResponseEntity.ok(pgmqClient.getMetrics());
+        return ResponseEntity.ok(pqueClient.getMetrics());
     }
     /**
      * To be truly correct, we should avoid loading messages with the same system we are examining.
@@ -77,13 +77,13 @@ public class LoadTestApi{
         for(int i=0; i<=10*multiplexer; i++){
             String finalId=formattedDate+"_"+i;
             request.setQuoteReqId(finalId);           
-            pgmqClient.send("market_request", request);
+            pqueClient.send("market_request", request);
             if(i%950 == 0){
                 log.info("** Loaded {} msg so far",i);
             }
         }
 
         return ResponseEntity.ok(
-            pgmqClient.getMetrics("market_request"));
+            pqueClient.getMetrics("market_request"));
     }
 }

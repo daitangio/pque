@@ -15,19 +15,19 @@ import lombok.extern.slf4j.Slf4j;
 public class PqueExtensionsTest {
 
     @Autowired
-    PGMQClient pgmqClient;
+    PQUEClient pqueClient;
 
     @Test
     public void listQueueWorks(){
 
-        log.info("{}", pgmqClient.listQueues());
+        log.info("{}", pqueClient.listQueues());
         assertEquals(7+2 /* test+demo */,
-            pgmqClient.listQueues().size());
+            pqueClient.listQueues().size());
     }
 
     @Test 
     public void getOne_Metric(){
-        var metrics=pgmqClient.getMetrics("empty_queue");
+        var metrics=pqueClient.getMetrics("empty_queue");
         log.info("{}",metrics);
         assertEquals(0,metrics.getQueueLength());
         
@@ -36,7 +36,7 @@ public class PqueExtensionsTest {
 
     @Test 
     public void getMetrics(){
-        for(var metric : pgmqClient.getMetrics()){
+        for(var metric : pqueClient.getMetrics()){
             log.info("{}",metric);
         }
     }

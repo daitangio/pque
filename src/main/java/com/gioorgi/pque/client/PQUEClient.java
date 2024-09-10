@@ -12,10 +12,10 @@ import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-import com.gioorgi.pque.client.config.PGMQConfiguration;
-import com.gioorgi.pque.client.config.PGMQDelay;
-import com.gioorgi.pque.client.config.PGMQVisiblityTimeout;
-import com.gioorgi.pque.client.json.PGMQJsonProcessor;
+import com.gioorgi.pque.client.config.PQUEConfiguration;
+import com.gioorgi.pque.client.config.PQUEDelay;
+import com.gioorgi.pque.client.config.PQUEVisiblityTimeout;
+import com.gioorgi.pque.client.json.PQUEJsonProcessor;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author GG
  */
 @Slf4j
-public class PGMQClient {
+public class PQUEClient {
 
     public static final String QUEUE_MUST_BE_NOT_NULL = "Queue must not be null!";
 
@@ -47,15 +47,15 @@ public class PGMQClient {
 
     private void validateQueueName(String queueName){        
         if (!StringUtils.hasText(queueName)) {
-                throw new PGMQException("Name of the queue must not be null with non-empty characters!");
+                throw new PQUEException("Name of the queue must not be null with non-empty characters!");
         }
     }
 
     private final JdbcOperations operations;
-    private final PGMQConfiguration configuration;
-    private final PGMQJsonProcessor jsonProcessor;
+    private final PQUEConfiguration configuration;
+    private final PQUEJsonProcessor jsonProcessor;
 
-    public PGMQClient(JdbcOperations operations, PGMQConfiguration configuration, PGMQJsonProcessor jsonProcessor) {
+    public PQUEClient(JdbcOperations operations, PQUEConfiguration configuration, PQUEJsonProcessor jsonProcessor) {
         Assert.notNull(operations, "JdbcOperations must not be null!");
         Assert.notNull(configuration, "PGMQConfiguration must not be null!");
         Assert.notNull(jsonProcessor, "PGMQJsonProcessor must not be null!");
@@ -68,7 +68,7 @@ public class PGMQClient {
 
 
 
-    private final long sendWithDelayLowLevel(String queue, String jsonMessage, PGMQDelay delay) {
+    private final long sendWithDelayLowLevel(String queue, String jsonMessage, PQUEDelay delay) {
         validateQueueName(queue);
 
         if (configuration.isCheckMessage()) {
@@ -81,15 +81,15 @@ public class PGMQClient {
             messageId = operations.queryForObject("select * from pque_send(?, ?::JSONB, ?)", (rs, rn) -> rs.getLong(1), queue, jsonMessage, delay.getSeconds());
             log.trace("Msgid {} Sent with delay {}seconds",messageId,delay.getSeconds());
         } catch (DataAccessException exception) {
-            throw new PGMQException("Failed to send message on queue " + queue, exception);
+            throw new PQUEException("Failed to send message on queue " + queue, exception);
         }
 
         return Optional.ofNullable(messageId)
-                .orElseThrow(() -> new PGMQException("No message id provided for sent message!"));
+                .orElseThrow(() -> new PQUEException("No message id provided for sent message!"));
     }
 
 
-    public <T extends Object> long sendWithDelay(String queue, T objectMessage, PGMQDelay delay) {
+    public <T extends Object> long sendWithDelay(String queue, T objectMessage, PQUEDelay delay) {
         return sendWithDelayLowLevel(queue, jsonProcessor.toJson(objectMessage), delay);
     }
 
@@ -108,7 +108,7 @@ public class PGMQClient {
     }
 
 
-    public <T extends Object> List<Long> sendBatchWithDelay(String queue, List<T> objectMessageList, PGMQDelay delay) {
+    public <T extends Object> List<Long> sendBatchWithDelay(String queue, List<T> objectMessageList, PQUEDelay delay) {
         List<String> jsonMessages=objectMessageList.stream().map(jsonProcessor::toJson).toList();
         return sendBatchWithDelayLowLevel(queue, jsonMessages, delay);
     }
@@ -120,7 +120,7 @@ public class PGMQClient {
         return sendBatchWithDelay(queue, jsonMessages, configuration.getDelay());
     }
 
-    private List<Long> sendBatchWithDelayLowLevel(String queue, List<String> jsonMessages, PGMQDelay delay) {
+    private List<Long> sendBatchWithDelayLowLevel(String queue, List<String> jsonMessages, PQUEDelay delay) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
         if (configuration.isCheckMessage()) {
@@ -131,22 +131,22 @@ public class PGMQClient {
         return operations.query("select * from pque_send_batch(?, ?::JSONB[], ?)", (rs, rn) -> rs.getLong(1), queue, jsonMessages.toArray(String[]::new), delay.getSeconds());
     }
 
-    public Optional<PGMQMessage> read(String queue) {
+    public Optional<PQUEMessage> read(String queue) {
         return read(queue, configuration.getVisibilityTimeout());
     }
 
-    public Optional<PGMQMessage> read(String queue, PGMQVisiblityTimeout visibilityTimeout) {
+    public Optional<PQUEMessage> read(String queue, PQUEVisiblityTimeout visibilityTimeout) {
         return Optional.ofNullable(DataAccessUtils.singleResult(readBatch(queue, visibilityTimeout, 1)));
     }
 
-    public List<PGMQMessage> readBatch(String queue, PGMQVisiblityTimeout visibilityTimeout, int quantity) {
+    public List<PQUEMessage> readBatch(String queue, PQUEVisiblityTimeout visibilityTimeout, int quantity) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
         Assert.isTrue(quantity > 0, "Number of messages for read must be positive!");
 
         try {
             return operations.query(
                     "select * from pque_read(?, ?, ?)",
-                    (rs, rowNum) -> new PGMQMessage(
+                    (rs, rowNum) -> new PQUEMessage(
                             rs.getLong("msg_id"),
                             rs.getLong("read_ct"),
                             rs.getObject("enqueued_at", OffsetDateTime.class),
@@ -155,11 +155,11 @@ public class PGMQClient {
                     ),
                     queue, visibilityTimeout.getSeconds(), quantity);
         } catch (DataAccessException exception) {
-            throw new PGMQException("Failed to read messages from queue " + queue, exception);
+            throw new PQUEException("Failed to read messages from queue " + queue, exception);
         }
     }
 
-    public List<PGMQMessage> readBatch(String queue, int quantity) {
+    public List<PQUEMessage> readBatch(String queue, int quantity) {
         return readBatch(queue, configuration.getVisibilityTimeout(), quantity);
     }
 
@@ -167,7 +167,7 @@ public class PGMQClient {
      * Pop directly a typed object
      */
     public <T> Optional<T> pop(String queue, Class<T> requiredType){
-        Optional<PGMQMessage> msg=popMsg(queue);
+        Optional<PQUEMessage> msg=popMsg(queue);
         if(msg.isEmpty()){
             return Optional.ofNullable(null);
         }else{
@@ -176,7 +176,7 @@ public class PGMQClient {
         }   
     }
     
-    public Optional<PGMQMessage> popMsg(String queue) {
+    public Optional<PQUEMessage> popMsg(String queue) {
         Assert.notNull(queue, QUEUE_MUST_BE_NOT_NULL);
 
         try {
@@ -184,7 +184,7 @@ public class PGMQClient {
                     DataAccessUtils.singleResult(
                             operations.query(
                                     "select * from pque_pop(?)",
-                                    (rs, rowNum) -> new PGMQMessage(
+                                    (rs, rowNum) -> new PQUEMessage(
                                             rs.getLong("msg_id"),
                                             rs.getLong("read_ct"),
                                             rs.getObject("enqueued_at", OffsetDateTime.class),
@@ -195,7 +195,7 @@ public class PGMQClient {
                     )
             );
         } catch (DataAccessException exception) {
-            throw new PGMQException("Failed to pop message from queue " + queue, exception);
+            throw new PQUEException("Failed to pop message from queue " + queue, exception);
         }
     }
 
@@ -205,7 +205,7 @@ public class PGMQClient {
         Boolean b = operations.queryForObject("select * from pque_delete(?, ?)", Boolean.class, queue, messageId);
 
         if (b == null) {
-            throw new PGMQException("Error during deletion of message from queue!");
+            throw new PQUEException("Error during deletion of message from queue!");
         }
 
         return b;
@@ -229,7 +229,7 @@ public class PGMQClient {
         Boolean b = operations.queryForObject("select * from pque_archive(?, ?)", Boolean.class, queue, messageId);
 
         if (b == null) {
-            throw new PGMQException("Error during archiving message from queue!");
+            throw new PQUEException("Error during archiving message from queue!");
         }
 
         return b;

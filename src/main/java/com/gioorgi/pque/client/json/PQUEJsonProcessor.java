@@ -1,6 +1,6 @@
 package com.gioorgi.pque.client.json;
 
-public interface PGMQJsonProcessor {
+public interface PQUEJsonProcessor {
 
     boolean isJson(String json);
 

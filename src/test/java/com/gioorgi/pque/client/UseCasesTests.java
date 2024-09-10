@@ -19,9 +19,9 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.gioorgi.pque.client.config.PGMQConfiguration;
-import com.gioorgi.pque.client.config.PGMQVisiblityTimeout;
-import com.gioorgi.pque.client.json.PGMQJsonProcessor;
+import com.gioorgi.pque.client.config.PQUEConfiguration;
+import com.gioorgi.pque.client.config.PQUEVisiblityTimeout;
+import com.gioorgi.pque.client.json.PQUEJsonProcessor;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -43,16 +43,16 @@ class UseCasesTests {
 
 
     @Autowired
-    PGMQConfiguration configuration;
+    PQUEConfiguration configuration;
 
     @Autowired
-    PGMQClient pgmqClient;
+    PQUEClient pqueClient;
 
     @Autowired
     PlatformTransactionManager transactionManager;
 
     @Autowired
-    PGMQJsonProcessor jsonProcessor;
+    PQUEJsonProcessor jsonProcessor;
 
     @Nested
     @DisplayName("Read")
@@ -62,14 +62,14 @@ class UseCasesTests {
         void readMessageWithoutDelete() throws InterruptedException {
             final String queue="without_delete_queue";
 
-            long messageId = pgmqClient.send(queue, "{\"customer_name\": \"John\"}");
+            long messageId = pqueClient.send(queue, "{\"customer_name\": \"John\"}");
 
-            PGMQMessage message = pgmqClient.read(queue, new PGMQVisiblityTimeout(1)).orElseThrow();
+            PQUEMessage message = pqueClient.read(queue, new PQUEVisiblityTimeout(1)).orElseThrow();
             Assertions.assertEquals(messageId, message.id());
 
             Thread.sleep(Duration.ofSeconds(2).toMillis()); // sorry for delay
 
-            PGMQMessage sameMessage = pgmqClient.read(queue).orElseThrow();
+            PQUEMessage sameMessage = pqueClient.read(queue).orElseThrow();
             Assertions.assertEquals(messageId, sameMessage.id());
 
         }
@@ -86,14 +86,14 @@ class UseCasesTests {
             @DisplayName("Success")
             void deleteMessages() {
                 final String queue="delete_queue";
-                List<Long> batchMessages = pgmqClient.sendBatch(queue,
+                List<Long> batchMessages = pqueClient.sendBatch(queue,
                         List.of(
                                 "{\"customer_name\": \"John\", \"items\": { \"description\": \"milk\", \"quantity\": 100 } }",
                                 "{\"customer_name\": \"John\", \"items\": { \"description\": \"milk\", \"quantity\": 101 } }"
                         )
                 );
 
-                List<Long> messageIds = pgmqClient.deleteBatch(queue, batchMessages);
+                List<Long> messageIds = pqueClient.deleteBatch(queue, batchMessages);
                 assertThat(messageIds).containsExactlyElementsOf(batchMessages);
 
             }
@@ -103,15 +103,15 @@ class UseCasesTests {
             void failedDeleteMessages() {
                 final String queue="delete_queue";
                 
-                Long messageId = pgmqClient.send(
+                Long messageId = pqueClient.send(
                         queue,
                         "{\"customer_name\": \"John\", \"items\": { \"description\": \"milk\", \"quantity\": 100 } }"
                 );
 
-                PGMQMessage message = pgmqClient.read(queue).orElseThrow();
+                PQUEMessage message = pqueClient.read(queue).orElseThrow();
                 assertThat(message.id()).isEqualTo(messageId);
 
-                List<Long> messageIds = pgmqClient.deleteBatch(queue, List.of(messageId, Long.MAX_VALUE));
+                List<Long> messageIds = pqueClient.deleteBatch(queue, List.of(messageId, Long.MAX_VALUE));
                 assertThat(messageIds).containsExactly(messageId);
 
             }
@@ -126,12 +126,12 @@ class UseCasesTests {
                 final String queue="delete_queue";
                 
 
-                long messageId = pgmqClient.send(queue, "{\"customer_name\": \"John\"}");
+                long messageId = pqueClient.send(queue, "{\"customer_name\": \"John\"}");
 
-                PGMQMessage message = pgmqClient.read(queue, new PGMQVisiblityTimeout(1)).orElseThrow();
+                PQUEMessage message = pqueClient.read(queue, new PQUEVisiblityTimeout(1)).orElseThrow();
                 Assertions.assertEquals(messageId, message.id());
 
-                boolean deleted = pgmqClient.delete(queue, messageId);
+                boolean deleted = pqueClient.delete(queue, messageId);
                 assertThat(deleted).isTrue();
 
             }
@@ -142,7 +142,7 @@ class UseCasesTests {
                 final String queue="delete_queue";
                 
 
-                boolean deleted = pgmqClient.delete(queue, Long.MAX_VALUE);
+                boolean deleted = pqueClient.delete(queue, Long.MAX_VALUE);
                 assertThat(deleted).isFalse();
 
 
@@ -163,14 +163,14 @@ class UseCasesTests {
 
                 final String queue="delete_queue";
                 
-                List<Long> batchMessages = pgmqClient.sendBatch(queue,
+                List<Long> batchMessages = pqueClient.sendBatch(queue,
                         List.of(
                                 "{\"customer_name\": \"John\", \"items\": { \"description\": \"milk\", \"quantity\": 100 } }",
                                 "{\"customer_name\": \"John\", \"items\": { \"description\": \"milk\", \"quantity\": 101 } }"
                         )
                 );
 
-                List<Long> messageIds = pgmqClient.archiveBatch(queue, batchMessages);
+                List<Long> messageIds = pqueClient.archiveBatch(queue, batchMessages);
                 assertThat(messageIds).containsExactlyElementsOf(batchMessages);
 
 
@@ -183,9 +183,9 @@ class UseCasesTests {
                 final String queue="delete_queue";
                 
 
-                long messageId = pgmqClient.send(queue, "{\"customer_name\": \"John\"}");
+                long messageId = pqueClient.send(queue, "{\"customer_name\": \"John\"}");
 
-                List<Long> messageIds = pgmqClient.archiveBatch(queue, List.of(messageId, Long.MAX_VALUE));
+                List<Long> messageIds = pqueClient.archiveBatch(queue, List.of(messageId, Long.MAX_VALUE));
                 assertThat(messageIds).containsExactly(messageId);
 
 
@@ -202,9 +202,9 @@ class UseCasesTests {
                 final String queue="delete_queue";
                 
 
-                long messageId = pgmqClient.send(queue, "{\"customer_name\": \"John\"}");
+                long messageId = pqueClient.send(queue, "{\"customer_name\": \"John\"}");
 
-                boolean archived = pgmqClient.archive(queue, messageId);
+                boolean archived = pqueClient.archive(queue, messageId);
                 assertThat(archived).isTrue();
 
 
@@ -214,8 +214,8 @@ class UseCasesTests {
             @DisplayName("Wrong message")
             void failedSingleMessage() {
                 final String queue="delete_queue";            
-                pgmqClient.send(queue, "{\"customer_name\": \"John\"}");
-                boolean archived = pgmqClient.archive(queue, Long.MAX_VALUE);
+                pqueClient.send(queue, "{\"customer_name\": \"John\"}");
+                boolean archived = pqueClient.archive(queue, Long.MAX_VALUE);
                 assertThat(archived).isFalse();
             }
         }
@@ -229,7 +229,7 @@ class UseCasesTests {
         void sendMessageFailedToInvalidQueue() {
             final String queue="wrong-queue";
 
-            assertThrows(PGMQException.class, () -> pgmqClient.send(queue, "{\"customer_name\": \"John\"}"), "Failed to send message on queue wrong");
+            assertThrows(PQUEException.class, () -> pqueClient.send(queue, "{\"customer_name\": \"John\"}"), "Failed to send message on queue wrong");
         }
 
         @Test
@@ -237,7 +237,7 @@ class UseCasesTests {
         void emptyMessage() {
             final String queue="empty_message";
             
-            assertThrows(IllegalArgumentException.class, () -> pgmqClient.send(queue, ""), "Message should be not empty!");
+            assertThrows(IllegalArgumentException.class, () -> pqueClient.send(queue, ""), "Message should be not empty!");
 
         }
 
@@ -251,8 +251,8 @@ class UseCasesTests {
 
             try {
                 transactionTemplate.executeWithoutResult((tx) -> {
-                    pgmqClient.send(queue, "{\"customer_name\": \"John1\"}");
-                    pgmqClient.send(queue, "{\"customer_name\": \"John2\"}");
+                    pqueClient.send(queue, "{\"customer_name\": \"John1\"}");
+                    pqueClient.send(queue, "{\"customer_name\": \"John2\"}");
 
                     throw new RuntimeException("Something wrong happened");
                 });
@@ -260,7 +260,7 @@ class UseCasesTests {
                 // we know it happens
             }
 
-            assertTrue(pgmqClient.readBatch(queue, 2).isEmpty());
+            assertTrue(pqueClient.readBatch(queue, 2).isEmpty());
 
 
         }
@@ -271,14 +271,14 @@ class UseCasesTests {
             final String queue="batch_queue";
             
 
-            List<Long> batchMessages = pgmqClient.sendBatch(queue,
+            List<Long> batchMessages = pqueClient.sendBatch(queue,
                     List.of(
                             "{\"customer_name\": \"John\", \"items\": { \"description\": \"milk\", \"quantity\": 100 } }",
                             "{\"customer_name\": \"John\", \"items\": { \"description\": \"milk\", \"quantity\": 101 } }"
                     )
             );
 
-            List<PGMQMessage> readMessages = pgmqClient.readBatch(queue, 2);
+            List<PQUEMessage> readMessages = pqueClient.readBatch(queue, 2);
             Assertions.assertEquals(batchMessages.size(), readMessages.size());
 
 
@@ -293,7 +293,7 @@ class UseCasesTests {
         @DisplayName("No message available")
         void popEmptyQueue() {
             final String queue="empty_queue";            
-            assertThat(pgmqClient.pop(queue,Object.class)).isEmpty();
+            assertThat(pqueClient.pop(queue,Object.class)).isEmpty();
         }
 
 
@@ -303,12 +303,12 @@ class UseCasesTests {
         void popFullQueue() {
             final String queue="batch_queue";
             Customer customer = new Customer("John", LocalDate.of(1990, 2, 1), LocalDateTime.now(), 34);
-            Long messageId = pgmqClient.send(
+            Long messageId = pqueClient.send(
                     queue,
                     customer
             );
 
-            PGMQMessage message = pgmqClient.popMsg(queue).orElseThrow();
+            PQUEMessage message = pqueClient.popMsg(queue).orElseThrow();
 
             assertThat(message.id()).isEqualTo(messageId);
             assertThat(jsonProcessor.fromJson(message.getJsonMessage(), Customer.class))                                        

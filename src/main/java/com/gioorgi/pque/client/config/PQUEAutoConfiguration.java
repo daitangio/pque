@@ -1,9 +1,9 @@
 package com.gioorgi.pque.client.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gioorgi.pque.client.PGMQClient;
-import com.gioorgi.pque.client.json.PGMQJsonProcessor;
-import com.gioorgi.pque.client.json.PGMQJsonProcessorJackson;
+import com.gioorgi.pque.client.PQUEClient;
+import com.gioorgi.pque.client.json.PQUEJsonProcessor;
+import com.gioorgi.pque.client.json.PQUEJsonProcessorJackson;
 
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -18,22 +18,22 @@ import org.springframework.jdbc.core.JdbcOperations;
         JacksonAutoConfiguration.class,
         DataSourceAutoConfiguration.class
 })
-@EnableConfigurationProperties(PGMQConfiguration.class)
-public class PGMQAutoConfiguration {
+@EnableConfigurationProperties(PQUEConfiguration.class)
+public class PQUEAutoConfiguration {
 
     @Bean
-    @ConditionalOnMissingBean(PGMQJsonProcessor.class)
+    @ConditionalOnMissingBean(PQUEJsonProcessor.class)
     @ConditionalOnBean(ObjectMapper.class)
-    public PGMQJsonProcessor pgmqJsonProcessor(ObjectMapper objectMapper) {
-        return new PGMQJsonProcessorJackson(objectMapper);
+    public PQUEJsonProcessor pqueJsonProcessor(ObjectMapper objectMapper) {
+        return new PQUEJsonProcessorJackson(objectMapper);
     }
 
     @Bean
-    @ConditionalOnBean(PGMQJsonProcessor.class)
-    public PGMQClient pgmqClient(JdbcOperations jdbcOperations,
-                                 PGMQConfiguration pgmqConfiguration,
-                                 PGMQJsonProcessor pgmqJsonProcessor) {
-        return new PGMQClient(jdbcOperations, pgmqConfiguration, pgmqJsonProcessor);
+    @ConditionalOnBean(PQUEJsonProcessor.class)
+    public PQUEClient pqueClient(JdbcOperations jdbcOperations,
+                                 PQUEConfiguration pqueConfiguration,
+                                 PQUEJsonProcessor pqueJsonProcessor) {
+        return new PQUEClient(jdbcOperations, pqueConfiguration, pqueJsonProcessor);
     }
 
 }

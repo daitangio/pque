@@ -28,7 +28,7 @@ public class MarketEmulator {
     public void send2Market(FIXRequest request) {
         try {
             // Emulate send to market, wait a bit for processing, between 0 and 500ms
-            long sleepTime = randomGenerator.get().nextLong(5)*100;
+            long sleepTime = randomGenerator.get().nextInt(5)*100;
             Thread.sleep(sleepTime);
             String response = "Processed into " + sleepTime + " Req:" + request.getQuoteReqId() + "Qty:"
                     + request.getQuantity();

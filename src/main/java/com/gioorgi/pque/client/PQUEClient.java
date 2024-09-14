@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.support.DataAccessUtils;
@@ -109,7 +110,7 @@ public class PQUEClient {
 
 
     public <T extends Object> List<Long> sendBatchWithDelay(String queue, List<T> objectMessageList, PQUEDelay delay) {
-        List<String> jsonMessages=objectMessageList.stream().map(jsonProcessor::toJson).toList();
+        List<String> jsonMessages=objectMessageList.stream().map(jsonProcessor::toJson).collect(Collectors.toList());
         return sendBatchWithDelayLowLevel(queue, jsonMessages, delay);
     }
 

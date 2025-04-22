@@ -33,6 +33,7 @@ PostgreSQL Target: 13.15+
 - [About the port](#about-the-port)
 - [About the DEMO](#about-the-demo)
 - [Other implementations](#other-implementations)
+- [How to publish on maven central:](#how-to-publish-on-maven-central)
 
 
 # Simple checks
@@ -312,3 +313,7 @@ With unlogged tables, we can easily reach 540 messages/second
 # Other implementations
 
 - Python based: https://github.com/malthe/pq
+
+# How to publish on maven central:
+Follow thea article here
+https://vaadin.com/blog/how-to-publish-java-libraries-to-maven-central-using-your-github-account

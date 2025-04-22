@@ -10,9 +10,37 @@
 	</parent>
 	<groupId>com.gioorgi.pque</groupId>
 	<artifactId>pque</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>	
 	<name>pque</name>
 	<description>PostgreSQL super light message queue</description>
+
+	<url>https://github.com/daitangio/pque/</url>	
+	<developers>
+		<developer>
+			<name>Giovanni Giorgi</name>
+			<email>jj@gioorgi.com</email>
+			<roles><role>Major Leader</role></roles>
+		</developer>
+	</developers>
+	<scm>
+		<url>https://github.com/daitangio/pque/</url>
+		<connection>scm:git:git://github.com/daitangio/pque.git</connection>
+		<developerConnection>scm:git:git://github.com/daitangio/pque.git</developerConnection>
+		<tag>HEAD</tag>
+	</scm>
+	<issueManagement>
+		<system>GitHub</system>
+		<url>https://github.com/daitangio/pque/issues</url>
+		
+	</issueManagement>
+	<licenses>
+		<license>
+            <name>The MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+		</license>
+	</licenses>
 	<properties>
 		<java.version>11</java.version>
 		<spring-boot.run.jvmArguments>
@@ -90,6 +118,7 @@
 		<!-- END - Test dependencies -->
 	</dependencies>
 
+
 	<build>
 		<plugins>
 			<plugin>
@@ -104,7 +133,85 @@
 					</excludes>
 				</configuration>
 			</plugin>
+
+			<plugin>
+				<!-- Fixing version & activating "release" profile for those who use release plugin -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>3.1.1</version>
+				<configuration>
+					<autoVersionSubmodules>true</autoVersionSubmodules>
+
+					<!-- Forward compatibility: "release-profile" will be removed from super POM.
+						It's better to define javadocs, sources, signing, etc. in an independent "release" profile. -->
+					<useReleaseProfile>true</useReleaseProfile>
+					<releaseProfiles>release</releaseProfiles>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
+
+<profiles>
+   <profile>
+       <id>release</id>
+       <build>
+           <plugins>
+               <plugin>
+                   <groupId>org.sonatype.central</groupId>
+                   <artifactId>central-publishing-maven-plugin</artifactId>
+                   <version>0.6.0</version>
+                   <extensions>true</extensions>
+                   <configuration>
+                       <publishingServerId>central</publishingServerId>
+                       <autoPublish>true</autoPublish>
+                   </configuration>
+               </plugin>
+
+               <plugin>
+                   <groupId>org.apache.maven.plugins</groupId>
+                   <artifactId>maven-source-plugin</artifactId>
+                   <version>3.3.1</version>
+                   <executions>
+                       <execution>
+                           <id>attach-sources</id>
+                           <goals>
+                               <goal>jar-no-fork</goal>
+                           </goals>
+                       </execution>
+                   </executions>
+               </plugin>
+
+               <plugin>
+                   <groupId>org.apache.maven.plugins</groupId>
+                   <artifactId>maven-javadoc-plugin</artifactId>
+                   <version>3.10.1</version>
+                   <executions>
+                       <execution>
+                           <id>attach-javadocs</id>
+                           <goals>
+                               <goal>jar</goal>
+                           </goals>
+                       </execution>
+                   </executions>
+               </plugin>
+
+               <plugin>
+                   <groupId>org.apache.maven.plugins</groupId>
+                   <artifactId>maven-gpg-plugin</artifactId>
+                   <version>3.2.4</version>
+                   <executions>
+                       <execution>
+                           <id>sign-artifacts</id>
+                           <phase>verify</phase>
+                           <goals>
+                               <goal>sign</goal>
+                           </goals>
+                       </execution>
+                   </executions>
+               </plugin>
+           </plugins>
+       </build>
+   </profile>
+</profiles>
 
 </project>

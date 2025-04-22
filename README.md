@@ -13,12 +13,13 @@ Feature:
 - PostgreSQL docker compose included for testing
 - Demo REST application provided
 - Removed partitioned implementation and simplified code
-
+- Published on maven central from version 1.0.2
 
 PostgreSQL Target: 13.15+
 
 - [pque](#pque)
 - [Simple checks](#simple-checks)
+  - [How to include the library in your project](#how-to-include-the-library-in-your-project)
 - [PSQL Interface](#psql-interface)
   - [SQL Examples](#sql-examples)
     - [Creating a queue and interacting with it](#creating-a-queue-and-interacting-with-it)
@@ -33,12 +34,21 @@ PostgreSQL Target: 13.15+
 - [About the port](#about-the-port)
 - [About the DEMO](#about-the-demo)
 - [Other implementations](#other-implementations)
-- [How to publish on maven central:](#how-to-publish-on-maven-central)
 
 
 # Simple checks
     ./mvnw spring-boot:run
     curl http://localhost:8080/v1/info
+
+## How to include the library in your project
+
+```xml
+<dependency>
+    <groupId>com.gioorgi.pque</groupId>
+    <artifactId>pque</artifactId>
+    <version>1.0.2</version>
+</dependency>
+```
 
 
 # PSQL Interface
@@ -64,11 +74,12 @@ SELECT * FROM pque_pop('mail_queue');
 ## PGML Examples
 
 Below some examples taken from the original pgmql project, adapted to work with pque
+Please refer to Giovanni Giorgi blog https://gioorgi.com/search/?query=pque for more articles on PQUE.
 
 
 ### Creating a queue
 
-Every queue is its own table in the `pgmq` schema. The table name is the queue name prefixed with `q_`.
+Every queue is its own table starting with `pque_` prefix. The table name is the queue name prefixed with `q_`.
 For example, `pque_q_my_queue` is the table for the queue `my_queue`.
 
 ```sql
@@ -314,6 +325,3 @@ With unlogged tables, we can easily reach 540 messages/second
 
 - Python based: https://github.com/malthe/pq
 
-# How to publish on maven central:
-Follow thea article here
-https://vaadin.com/blog/how-to-publish-java-libraries-to-maven-central-using-your-github-account

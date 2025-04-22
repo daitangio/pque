@@ -42,9 +42,9 @@
 	</licenses>
 	<properties>
 		<java.version>11</java.version>
-		<spring-boot.run.jvmArguments>
-		-verbose:gc -server -Xms70m
-		</spring-boot.run.jvmArguments>
+		<spring-boot.run.jvmArguments>-verbose:gc -server -Xms70m</spring-boot.run.jvmArguments>
+		<!-- Unit testing -->
+		<argLine>-Xms128m -Xmx128m -XX:+UseG1GC -verbose:gc</argLine>
 	</properties>
 	<dependencies>
 		<dependency>

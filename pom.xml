@@ -9,7 +9,7 @@
 	</parent>
 	<groupId>com.gioorgi.pque</groupId>
 	<artifactId>pque</artifactId>
-	<version>1.0.2</version>
+	<version>1.0.3-SNAPSHOT</version>
 	<packaging>jar</packaging>	
 	<name>pque</name>
 	<description>PostgreSQL super light message queue</description>
@@ -26,7 +26,7 @@
 		<url>https://github.com/daitangio/pque/</url>
 		<connection>scm:git:https://github.com/daitangio/pque.git</connection>
 		<developerConnection>scm:git:https://github.com/daitangio/pque.git</developerConnection>
-		<tag>1.0.2</tag>
+		<tag>1.0.1</tag>
 	</scm>
 	<issueManagement>
 		<system>GitHub</system>
